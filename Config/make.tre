@@ -1,0 +1,120 @@
+#Compiler Options -- serial hands-off version
+#LD = xlf90_r -qspillsize=2152 
+#CF90 = xlf90_r  -qsuffix=f=f90 -qspillsize=2152 -qfree=f90
+#CF77 = xlf90_r -qfixed -qspillsize=2152
+#
+
+#Compiler -- F90
+#CF90 = /usr/bin/xlf95_r 
+CF90 = mpxlf95_r 
+
+#Compiler -- F77
+CF77 = /usr/bin/xlf90_r 
+CP77 = $(CF90)
+
+#Linker 
+#LD = /usr/bin/xlf95_r 
+LD = mpxlf95_r
+
+#Paralellization opts
+#PARO =
+PARO = -qsmp=omp
+
+#Size defaults
+SIZEO = -b64 -q64 -qrealsize=8
+
+#Arch opts
+ARCHO= -qarch=auto -qtune=auto -qcache=auto
+
+#Optimalization opts
+OPTO= -O3 -qstrict
+OPTO= -O2 -qstrict
+
+#Inlining opts
+#INLO= -Q -qipa
+INLO=
+
+# Diverse options
+DIVO= -qmaxmem=-1 -qnosave -I/usr/local/NetCDF/include
+
+
+
+
+# Flags for debugging -- slow, gives location of SIGTRAP
+# -g        -- turns on debugging ...
+# -qfloat   -- options for floating point operations
+# -qflttrap -- Floating point operation traps
+# -qextchk  -- Checks if subroutine args are consistent + common block checks
+# -C        -- Checks array bounds 
+# qinitauto=FF initializes all vars to NaN -- So that uninitialized vars can be detected
+#
+#DEBUG_FLAGS = -C -qflttrap=underflow:overflow:zerodivide:invalid:enable  \
+#              -qextchk -qinitauto=FF -qfloat=nofold:nohssngl:nans  -g
+
+
+# version without qfloat shoul allow for stmt_func
+#         without qextchk which allows for inconsistent interfaces 
+#         qextchk notes the different declarations of a in analysis(A,...)
+#DEBUG_FLAGS = -C -qflttrap=overflow:zerodivide:invalid:enable -qinitauto=FF -g -qfullpath \
+#              -qinitauto=FF	 
+#DEBUG_FLAGS = -qflttrap=underflow:overflow:zerodivide:invalid:enable  -qfullpath
+DEBUG_FLAGS = -pg
+
+
+F77FLG = -qextname -qfixed                   
+F90FLG = -qextname -qsuffix=f=f90 -qfree=f90 
+
+
+FFLAGS    = $(SIZEO) $(OPTO) $(ARCHO) $(PARO)    $(INLO) $(DIVO) $(DEBUG_FLAGS) 
+LINKFLAGS = $(SIZEO) $(OPTO) $(PARO) $(INLO) $(DIVO) $(DEBUG_FLAGS)  -bloadmap:load.out  -brename:.dgesvd_,.dgesvd
+
+
+
+
+
+CPPARCH = -DPWR4 -DAIX
+CPPFLAGS =  -P $(CPPARCH) 
+#LIBS = -lessl /home/parallab/nersc/knutali/lib/liblapack64.a
+LIBS = -lessl -lmass -L /usr/local/lib/ -llapack -L /usr/local/NetCDF/lib/ -lnetcdf
+#LIBS = -lessl -L /usr/local/lib/ -llapack -L /usr/local/NetCDF/lib/ -lnetcdf
+
+
+CPP = /usr/lib/cpp
+
+
+
+
+
+all: $(TARGET) 
+
+
+$(TARGET): $(INC2) $(OMOD) $(OBJECTS)  $(OMP_EXCEPTION_OBJ77) $(OMP_EXCEPTION_OBJ90)
+	cd ./TMP ; $(LD) $(LINKFLAGS) -o ../$(TARGET) $(OMOD) $(OBJECTS) $(LIBS) -brename:.dgesvd_,.dgesvd 
+
+
+#################################################################################
+OBJECTS1 =  p_test.o mod_states.o mod_dimensions.o m_testref.o
+$(TARGET1): $(OBJECTS1) $(OMOD) 
+	cd ./TMP ; $(LD) $(LINKFLAGS) -o ../$(TARGET1) $(OBJECTS1) 
+
+#################################################################################
+OBJECTS2 = mod_raw_io.o m_parse_blkdat.o p_EnKF_postprocess.o 
+$(TARGET2): $(OBJECTS2)  
+	cd ./TMP ; $(LD) $(LINKFLAGS) -o ../$(TARGET2) $(OBJECTS2) 
+
+#################################################################################
+
+clean:
+	cd ./TMP ; rm *.f  *.o *.f90 *.h *.mod
+
+
+new: source depend
+
+source:
+	./mksource.sh > source.files
+
+depend:
+	./mkdepend.pl | sort -u > depends.file
+
+include depends.file
+

@@ -1,0 +1,87 @@
+# Knuts home directory (contains some libs/includes)
+#KHOME = /home/fimm/nersc/knutali/
+KHOME = 
+
+#Compiler -- F90
+CF90 = ifort
+#CF90 = /local/openmpi/bin/mpif90
+
+#Compiler -- F77
+CF77 = $(CF90)
+
+# Compiler -- C
+CC=icc
+#CC=/local/openmpi/bin/mpicc
+
+#Linker 
+LD =  $(CF90)
+
+
+#Paralellization opts
+PARO = -lmpi 
+#PARO = 
+
+#Size defaults - Change to real_size 64 for default double...
+SIZEO = -real_size 64 -double_size 64
+#SIZEO = 
+
+#Arch opts
+ARCHO= 
+
+#Optimalization opts
+#OPTO= 
+OPTO= -O3 -xSSE4.2
+
+#Inlining opts
+INLO= -ip
+#INLO=
+
+
+# Diverse options -swap endian IO -use medium memory model
+DIVO= -convert big_endian -shared-intel -mcmodel=medium
+
+# Flags for debugging. Empty optimization (OPTO above) to use debugging properly
+#
+#DEBUG_FLAGS = -g  -check bounds -fpstkchk -traceback -fpe0 
+#DEBUG_FLAGS = -g  -check all -traceback -fpe0  -CA -CB -CS -CU -CV
+DEBUG_FLAGS = -g -cm -vec_report0 -w
+
+
+
+CFLAGS = -O -shared-intel -mcmodel=medium
+F77FLG = -fixed
+F90FLG = -free
+
+# C preprocessor
+CPP = cpp -P
+#CPP = /usr/bin/cpp
+
+#CPP flags 
+#CPPARCH = -traditional -DIA32 -DFFTW
+#CPPARCH = #-DIA32 -DREAL8 -DSERIAL_IO -DTIMER -DFFTW #-DENDIAN_IO
+CPPARCH = -DF90_NOFLUSH #-DIA32 -DREAL8 -DSERIAL_IO -DTIMER -DFFTW #-DENDIAN_IO
+CPPFLAGS = -P $(CPPARCH) -ansi -DQMPI 
+
+#This uses the OpenMPI implementation of mpi-2
+#LIBS =  -L/local/netcdf/lib/ -lnetcdf  -L/local/openmpi/lib/ -lmpi \
+#        -L/local/fftw/lib/ -lfftw3   \
+#        -L/local/acml/ifort64/lib/ -lacml_mv -lacml -lg2c
+LIBS =  -mkl=sequential #parallel \
+#        -L/prod/forecast/opt/lib -lfftw3
+#        -L/store/hengedahl/lib/fftw-3.3/out/lib -lfftw3 \
+#        -L/store/tuccillo/libs/netcdf-3.6.2/lib -lnetcdf
+
+# Include dir for header and module files
+#INCLUDEDIR= -I/local/netcdf/include -I/local/fftw/include \
+#-I/local/openmpi/include
+#INCLUDEDIR=  -I/store/hengedahl/lib/fftw-3.3/out/include \
+INCLUDEDIR=  
+# -I/sw/sdev/Modules/netcdf/netcdf-3.6.2/include/
+#             -I/store/tuccillo/libs/netcdf-3.6.2/include
+
+
+# Put together flags
+FFLAGS    = $(SIZEO) $(OPTO) $(ARCHO) $(PARO)    $(INLO) $(DIVO) $(DEBUG_FLAGS) $(INCLUDEDIR)
+LINKFLAGS = $(SIZEO) $(OPTO) $(PARO) $(INLO) $(DIVO) $(DEBUG_FLAGS)  \
+            -lnetcdff -lnetcdf -lmpi
+

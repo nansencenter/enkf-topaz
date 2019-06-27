@@ -1,0 +1,36 @@
+INC_NETCDF = 
+LIB_NETCDF= -lnetcdf
+LIB_LAPACK = -lacml
+
+INCS = $(INC_NETCDF)
+LIBS = $(LIB_LAPACK) $(LIB_NETCDF)
+
+CPPARCH = -DIA32 -DNOMPIR8
+CPPFLAGS = -P $(CPPARCH) -DF90_NOFLUSH
+
+ifeq ($(MPI),YES)
+	CF90 = ftn
+	PARO = -mp
+else
+	CF90 = ftn
+	PAR0 =
+endif
+CF77 = $(CF90)
+LD = $(CF90)
+CPP = /usr/bin/cpp -traditional-cpp
+
+SIZEO = -r8
+OPTO = -fullwarn
+ARCHO=
+INLO =
+DIVO= -byteswapio
+DEBUG_FLAGS =
+
+FFLAGS = $(SIZEO) $(OPTO) $(ARCHO) $(PARO) $(INLO) $(DIVO) $(DEBUG_FLAGS) $(INCS)
+CFLAGS = -DpgiFortran
+LINKFLAGS = $(SIZEO) $(OPTO) $(ARCHO) $(PARO) $(INLO) $(DIVO) $(DEBUG_FLAGS)
+
+# language-specific flags
+#
+F77FLG =  -fixedform            
+F90FLG = -freeform

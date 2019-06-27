@@ -1,0 +1,47 @@
+LIB_NETCDF= -lnetcdf
+LIB_LAPACK = -lacml
+
+INCS = $(INC_NETCDF) $(INC_FFTW)
+LIBS = $(LIB_LAPACK) $(LIB_NETCDF) $(LIB_FFTW)
+
+ifeq ($(MPI),YES)
+	CF90 = ftn
+	PARO = -Mmpi=mpich -Mprof=dwarf -Minform=inform
+	CPPFLAGS = -DQMPI
+else
+	CF90 = ftn
+	PAR0 = 
+endif
+CF77 = $(CF90)
+CC = $(CF90)
+LD = $(CF90)
+CPP = /usr/bin/cpp -traditional-cpp -P
+
+CPPARCH = -DIA32 -DFFTW -DNOMPIR8
+CPPFLAGS += $(CPPARCH) -DF90_NOFLUSH
+
+SIZEO = -r8
+OPTO = -fast -fastsse
+ARCHO= -mcmodel=medium
+INLO =
+DIVO = -byteswapio
+DEBUG_FLAGS =
+
+# uncomment below for debugging and set MPI = NO in makefile
+#	CF90 = pgfortran
+#	DEBUG_FLAGS = -g -Minform=inform
+#	PAR0 =
+#	OPTO = 
+#	INC_NETCDF = -I/local/netcdf-3.6.2-pgi/include
+#	LIB_NETCDF = /local/netcdf-3.6.2-pgi/lib/libnetcdf.a
+#	INC_FFTW = -I/opt/fftw/3.2.2/include
+#	LIB_FFTW = /opt/fftw/3.2.2/lib/libfftw3.a
+
+FFLAGS = $(SIZEO) $(OPTO) $(ARCHO) $(PARO) $(INLO) $(DIVO) $(DEBUG_FLAGS) $(INCS)
+CFLAGS = $(FFLAGS) -DpgiFortran
+LINKFLAGS = $(SIZEO) $(OPTO) $(ARCHO) $(PARO) $(INLO) $(DIVO) $(DEBUG_FLAGS)
+
+# language-specific flags
+#
+F77FLG = -Mfixed                   
+F90FLG = -Mfree

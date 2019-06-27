@@ -1,0 +1,31 @@
+v. 2.10, PS 25/08/2010
+
+- Changed usage of EnKF. Now the parameters are communicated to the program via
+  a file with Fortran name list, passed as the first parameter.
+
+- Added a new module m_parameters.F90 to handle the above.
+
+- Pass the inflation magnitude as a parameter to update_fields(), rather than 
+  calc_X5(). This enables to vary inflation depending on the updated field, 
+  which is necessary for parameter estimation
+
+- Created a new modue m_uobs.F90 and moved there get_uobs(), now renamed as 
+  uobs_get().
+
+- Added pieces of code to handle estimation for SST and SSH biases. The 
+  corresponding 2D fields are supposed to be named as "sstb" and "msshb". The
+  estimates are subtracted from the ensemble fields of those in prep_4_EnKF().
+  Also, the estimate for SST  bias is subtracted from the in-situ T fields in
+  the ixed layer, smoothed by a factor exp(-(z /mld)**2).
+
+- Removed m_read_mean_ssh.F90. There is a duplication of this procedure placed
+  now in p_prep_4_EnKF.F90 in Prep/m_get_def_wet_point.F90, which is to removed
+  in future.
+
+- Made "obs" and "nobs" global throughout the code, residing in m_obs. 
+  Accordingly, the variable name for local observations in m_local_analysis.F90
+  became "lobs" and "nlobs". 
+
+- Made all observation tags in capital letters (backward compatible).
+
+- removed m_datatest.F90; moved testing the obs range to m_obs.F90.

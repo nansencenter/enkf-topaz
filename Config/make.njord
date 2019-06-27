@@ -1,0 +1,47 @@
+INC_NETCDF = -I/usr/local/netcdf/netcdf-3.6.2/include
+LIB_NETCDF= /usr/local/netcdf/netcdf-3.6.2/lib/libnetcdf.a
+LIB_LAPACK = /usr/local/lapack/lapack-3.0.20021004/lib/liblapack.a
+
+INCS = $(INC_NETCDF)
+LIBS = -lessl -lmass  $(LIB_LAPACK) $(LIB_NETCDF)
+
+CPPARCH = -DAIX -Df2cFortran
+CPPFLAGS += -P $(CPPARCH) -DF90_NOFLUSH -ansi
+
+ifeq ($(MPI),YES)
+	CF90 = mpxlf95_r
+	PARO = -qsmp=omp
+	CC = mpcc_r
+else
+	CF90 = xlf95_r
+	PAR0 =
+	CC = xlc
+endif
+CF77 = $(CF90)
+LD = $(CF90)
+CPP = cpp
+
+SIZEO = -b64 -q64 -qrealsize=8
+OPTO = -O2 -qstrict
+ARCHO= -qarch=auto -qtune=auto -qcache=auto
+INLO =
+DIVO= -qmaxmem=-1 -qnosave
+
+# Flags for debugging -- slow, gives location of SIGTRAP
+# -g        -- turns on debugging ...
+# -qfloat   -- options for floating point operations
+# -qflttrap -- Floating point operation traps
+# -qextchk  -- Checks if subroutine args are consistent + common block checks
+# -C        -- Checks array bounds 
+# qinitauto=FF initializes all vars to NaN -- So that uninitialized vars can be detected
+#DEBUG_FLAGS = -C -qflttrap=underflow:overflow:zerodivide:invalid:enable -qextchk -qinitauto=FF -qfloat=nofold:nohssngl:nans  -g
+DEBUG_FLAGS =
+
+FFLAGS = $(SIZEO) $(OPTO) $(ARCHO) $(PARO) $(INLO) $(DIVO) $(DEBUG_FLAGS) $(INCS) 
+CFLAGS = -O2 -DpgiFortran
+LINKFLAGS = $(SIZEO) $(OPTO) $(PARO) $(INLO) $(DIVO) $(DEBUG_FLAGS)  -bloadmap:load.out
+
+# language-specific flags
+#
+F77FLG = -qfixed                   
+F90FLG = -qsuffix=f=f90 -qfree=f90 

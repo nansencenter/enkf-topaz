@@ -1,0 +1,38 @@
+INC_NETCDF = 
+LIB_NETCDF= -lnetcdf
+LIB_LAPACK = /home/nersc/pavelsa/local/lib/pg/lapack.a /home/nersc/pavelsa/local/lib/pg/tmglib.a /home/nersc/pavelsa/local/lib/pg/blas.a 
+
+INCS = $(INC_NETCDF)
+LIBS = $(LIB_LAPACK) $(LIB_NETCDF)
+
+ifeq ($(MPI),YES)
+	CF90 = ftn
+	PARO = -Mmpi -Mprof
+	CPPFLAGS = -DQMPI
+else
+	CF90 = ftn
+	PAR0 =
+endif
+CF77 = $(CF90)
+CC = $(CF90)
+LD = $(CF90)
+CPP = /usr/bin/cpp -traditional-cpp
+
+CPPARCH = -DIA32 -DFFTW -DNOMPIR8
+CPPFLAGS += -P $(CPPARCH) -DF90_NOFLUSH
+
+SIZEO = -r8
+OPTO =
+ARCHO=
+INLO =
+DIVO= -byteswapio
+DEBUG_FLAGS = -g -Minform=inform
+
+FFLAGS = $(SIZEO) $(OPTO) $(ARCHO) $(PARO) $(INLO) $(DIVO) $(DEBUG_FLAGS) $(INCS)
+CFLAGS = $(FFLAGS) -DpgiFortran
+LINKFLAGS = $(SIZEO) $(OPTO) $(ARCHO) $(PARO) $(INLO) $(DIVO) $(DEBUG_FLAGS)
+
+# language-specific flags
+#
+F77FLG = -Mfixed                   
+F90FLG = -Mfree

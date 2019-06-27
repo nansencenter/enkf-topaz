@@ -1,0 +1,35 @@
+
+ifeq ($(MPI),YES)
+	CF90 = ifort
+	PARO = -Mprof=dwarf -Minform=inform
+	CPPFLAGS = -DQMPI 
+else	
+	CF90 = ifort
+	PAR0 = 
+endif
+CF77 = $(CF90)
+CC = icc
+LD =  $(CF90)
+
+# CPP, used internally by compilers - note that some compilers
+# need special options for this, consult compiler manual if in trouble
+CPP= /usr/bin/cpp -traditional-cpp -P 
+CPPARCH = -DIA32 -DREA8 -DSERIA_IO -DTIMER -DIARGC -DFFTW -DIFPORT
+CPPFLAGS += $(CPPARCH) 
+
+
+# Compiler flags - real*8 version 
+#FFLAGS = -g -convert big_endian -assume byterecl -cm -vec_reprot0 -w -xCORE-AVX2  -o2 -no-prec-div -qopt-prefetch -auto-p32 -no-ansi-alias -qopt-mem-layout-trans=2 -r8 -g -traceback -v -debug extended
+FFLAGS = -g -convert big_endian -assume byterecl -cm -vec_reprot0 -w -xCORE-AVX2  -o2 -no-prec-div -qopt-prefetch -auto-p32 -no-ansi-alias -qopt-mem-layout-trans=2 -r8 
+
+
+#CFLAGS= -O -shared-intel -mcmodel=medium
+CFLAGS= -xCORE-AVX2 -o2 -no-prec-div -qopt-prefetch -auto-p32 -no-ansi-alias -qopt-mem-layout-trans=2 
+
+
+
+# Linker flags
+LINKFLAGS= -I$(NETCDF_INCLUDE_OPTS) $(FFLAGS)  
+
+#Libraries, Netcdf, FFTW, LAPACK
+LIBS = -lfftw3 -lnetcdff -lnetcdf

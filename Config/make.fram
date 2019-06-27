@@ -1,0 +1,66 @@
+
+#Compiler -- F90
+CF90 = mpiifort
+
+#Compiler -- F77
+CF77 = $(CF90)
+
+# Compiler -- C
+CC=mpiicc
+
+#Linker 
+LD =  $(CF90)
+
+
+#Paralellization opts
+PARO = -lmpi -parallel
+#PARO = 
+
+#Size defaults - Change to real_size 64 for default double...
+#SIZEO = -real_size 64 -double_size 64
+#SIZEO = -r8 
+
+#Arch opts
+ARCHO= -xCORE-AVX2 -O2 -no-prec-div -qopt-prefetch=2 -auto-p32 -no-ansi-alias -qopt-mem-layout-trans=2 
+
+#Optimalization opts
+OPTO= -g -convert big_endian -assume byterecl -cm -vec_reprot0 -w -O2 -r8 -g -traceback
+#OPTO= -O3 -xSSE4.2
+
+#Inlining opts
+#INLO= -ip
+INLO=
+
+
+# Diverse options -swap endian IO -use medium memory model
+#DIVO= -convert big_endian -shared-intel -mcmodel=medium
+
+# Flags for debugging. Empty optimization (OPTO above) to use debugging properly
+#
+#DEBUG_FLAGS = -g -cm -vec_report0 
+
+
+CFLAGS = -O2 -shared-intel -mcmodel=medium
+F77FLG = -nofree
+F90FLG = -free
+
+# C preprocessor
+#CPP flags 
+CPP = /usr/bin/cpp -P -traditional-cpp
+CPPARCH = -DIA32 -DREA8 -DMPI -DSERIA_IO -DTIMER -DIARGC -DFFTW -DEANDIAN_IO 
+CPPFLAGS += -P $(CPPARCH) -ansi -DQMPI -DFFTW 
+
+
+
+#This uses the OpenMPI implementation of mpi-2
+#LIBS = -mkl=parallel -lfftw3 -lgsl -lnetcdff -lnetcdf
+
+# Include dir for header and module files
+#INCLUDEDIR= -I/local/netcdf/include -I/local/fftw/include \
+
+
+# Put together flags
+FFLAGS    = $(SIZEO) $(OPTO) $(ARCHO) $(PARO)    $(INLO) $(DIVO) $(DEBUG_FLAGS) $(INCLUDEDIR)
+LINKFLAGS = $(SIZEO) $(OPTO) $(PARO) $(INLO) $(DIVO) $(DEBUG_FLAGS)  \
+            -lfftw3 -lnetcdff -lnetcdf -lmpi -lmkl
+

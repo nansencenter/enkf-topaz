@@ -1,0 +1,10 @@
+#undef TEST_2D
+#undef LINUX
+#undef DEBUG
+#undef TEST_1D
+#define ICE
+#define SINGLE_RESTART 
+#define EXPCOV
+#define PROF_RADIUS 
+#undef CHECK_SOLUTION
+#undef X4SVD
