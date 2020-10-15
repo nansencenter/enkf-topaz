@@ -59,8 +59,9 @@
 ! 29/04/2008 PS: added nfw_rename_var(fname, ncid, oldname, newname)
 ! 21/10/2009 PS: added nfw_var_exists(ncid, name)
 ! 22/10/2009 PS: added nfw_put_att_double(fname, ncid, varid, attname, type, 
-!                                         length, v)
+!
 ! 06/11/2009 PS: added nfw_dim_exists(ncid, name)
+! 20/09/2019 PS: added nfw_var_att_exists(ncid, varid, attname, type,length)
 !                nfw_put_att_real(fname, ncid, varid, attname, type, length, v)
 !                nfw_get_att_real(fname, ncid, varid, attname, v)
 
@@ -70,7 +71,7 @@ module nfw_mod
 
   character(*), private, parameter :: nfw_version = "0.03"
   integer, private, parameter :: logunit = 6
-  character(*), private, parameter :: errprefix = "nfw: error: "
+  character(*), private, parameter :: errprefix = "nfw: error:          "
   private quit1, quit2, quit3
 
 contains
@@ -805,6 +806,19 @@ contains
     status = nf_inq_varid(ncid, trim(name), varid)
     nfw_var_exists = (status == 0)
   end function nfw_var_exists
+
+
+  logical function nfw_var_att_exists(ncid,varid, name)
+    integer, intent(in) :: ncid,varid
+    character*(*), intent(in) :: name
+
+    integer :: status
+    integer :: cxtype,cnlen
+
+    status = nf_inq_att(ncid, varid, trim(name),cxtype,cnlen)
+    nfw_var_att_exists = (status == 0)
+  end function nfw_var_att_exists
+
 
   logical function nfw_dim_exists(ncid, name)
     integer, intent(in) :: ncid
