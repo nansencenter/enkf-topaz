@@ -40,6 +40,10 @@ program fixhycom
    integer*4, external :: iargc
    real, parameter :: onem=9806.
    real, parameter :: PSTARB0 = 1000;
+   logical, parameter :: INITBIAS = .false.
+   real, parameter :: ALPHA = 0.02d0
+   real, parameter :: BETA = sqrt(1.0d0 - (1.0d0 - ALPHA) ** 2)
+
 
    integer imem                  ! ensemble member
    character(len=80) :: restart,icerestart ! restart template
@@ -225,6 +229,60 @@ program fixhycom
             !set it equal to the time level 1 that has been corrected
             fld = dp(:,:,vlevel) 
 #if defined (TOPAZ)
+         else if (trim(cfld) == 'sstb') then
+            ! uncomment to initialise sstb field
+            !
+            ! to judge whether need to initilize
+
+            call randn(1, rand)
+            if (INITBIAS) then
+               fld = 0.0d0
+               where (depths > 1.0d0)
+                  fld = rand(1)
+               end where
+               do j = 1, jdm
+                  do i = 1, idm
+                     lat = modlat(i, j)
+                     if (lat > 70.0d0) then
+                        fld(i, j) = 0.0d0
+                     elseif (lat > 60.0d0) then
+                        fld(i, j) = fld(i, j) *&
+                        sqrt(abs(1.0d0 - ((lat - 60.0d0) / (70.0d0 - 60.0)) ** 2))
+                     end if
+                  end do
+               end do
+            else
+               do j = 1, jdm
+                  do i = 1, idm
+                     if (depths(i, j) <= 1.0d0) then
+                        cycle
+                     end if
+                     lat = modlat(i, j)
+                     if (lat > 70.0d0) then
+                        fld(i, j) = 0.0d0
+                     elseif (lat > 60.0d0) then
+                        fld(i, j) = (1.0d0 -ALPHA)*fld(i,j)+BETA*rand(1)*0.2* &
+                             sqrt(abs(1.0d0-((lat-60.0d0)/(70.0d0-60.0))**2))
+                     else
+                        fld(i, j) =(1.0d0- ALPHA)* fld(i, j)+BETA*rand(1)*0.20
+                     end if
+                  end do
+               end do
+            end if
+
+         else if (trim(cfld) == 'msshb') then
+            call randn(1, rand)
+            if (INITBIAS) then
+               fld = 0.0d0
+               where (depths > 1.0d0)
+                  fld = rand(1) * 0.4d0
+               end where
+            else
+               where (depths > 1.0d0)
+                  fld = (1.0d0 - ALPHA) * fld + BETA * rand(1) * 0.02d0
+               end where
+            end if
+
 ! in west of Mediterranean
           else if (trim(cfld)=='pbavg' .or. trim(cfld)=='ubavg' .or. trim(cfld)=='vbavg'&
                  .or. trim(cfld)=='u' .or. trim(cfld)=='v') then
