@@ -14,22 +14,37 @@ LD =  $(CF90)
 # CPP, used internally by compilers - note that some compilers
 # need special options for this, consult compiler manual if in trouble
 CPP= /usr/bin/cpp -traditional-cpp -P 
-CPPARCH = -DIA32 -DREA8 -DSERIA_IO -DTIMER -DIARGC -DFFTW -DIFPORT
+CPPARCH = -DIA32 -DREA8 -DSERIA_IO -DTIMER -DIARGC -DFFTW -DIFPORT 
 CPPFLAGS += $(CPPARCH) 
+#CPPFLAGS += $(CPPARCH) -DF90_NOFLUSH 
+#CPPFLAGS = -P $(CPPARCH) -std=gnu9x
 
+
+
+# Flags for fixed/free format
+#F90FLG= -free
+#F77FLG = -nofree
+
+#NETCDF_INCLUDE_OPTS=/cluster/software/software/netCDF/4.4.4-intel-2017a-HDF5-1.8.18/include
+#NETCDF_INCLUDE_OPTS=/cluster/software/software/netCDF/4.4.4-intel-2018b/include
 
 # Compiler flags - real*8 version 
-#FFLAGS = -g -convert big_endian -assume byterecl -cm -vec_reprot0 -w -xCORE-AVX2  -o2 -no-prec-div -qopt-prefetch -auto-p32 -no-ansi-alias -qopt-mem-layout-trans=2 -r8 -g -traceback -v -debug extended
-FFLAGS = -g -convert big_endian -assume byterecl -cm -vec_reprot0 -w -xCORE-AVX2  -o2 -no-prec-div -qopt-prefetch -auto-p32 -no-ansi-alias -qopt-mem-layout-trans=2 -r8 
+#FFLAGS = -g -convert big_endian -assume byterecl -cm -vec_reprot0 -w -xCORE-AVX2 -o3 -r8 -g -traceback -parallel -w -ftz -align all -fno-alias -no-prec-div -qopt-prefetch 
 
+FFLAGS = -g -convert big_endian -assume byterecl -cm -vec_reprot0 -w -xCORE-AVX2  -O2 -no-prec-div -qopt-prefetch -auto-p32 -no-ansi-alias -qopt-mem-layout-trans=2 -r8 -g -traceback 
 
 #CFLAGS= -O -shared-intel -mcmodel=medium
-CFLAGS= -xCORE-AVX2 -o2 -no-prec-div -qopt-prefetch -auto-p32 -no-ansi-alias -qopt-mem-layout-trans=2 
+CFLAGS= -xCORE-AVX2 -O2 -no-prec-div -qopt-prefetch -auto-p32 -no-ansi-alias -qopt-mem-layout-trans=2 
 
 
 
 # Linker flags
-LINKFLAGS= -I$(NETCDF_INCLUDE_OPTS) $(FFLAGS)  
+
+LINKFLAGS= $(FFLAGS) 
+
 
 #Libraries, Netcdf, FFTW, LAPACK
-LIBS = -lfftw3 -lnetcdff -lnetcdf
+
+#LIBS = -lfftw3 -lgsl -lnetcdff -lnetcdf
+LIBS = -lfftw3 -lnetcdff -lnetcdf 
+
