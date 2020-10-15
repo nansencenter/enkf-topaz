@@ -196,6 +196,23 @@ contains
                   readfld, depths, nx, ny, nz, 0) 
           end do
 
+       elseif (trim(unique_obs(iuobs)) == 'SSS') then
+          do iens = 1, nrens
+             write(cmem,'(i3.3)') iens
+             tlevel = 1
+             call get_mod_fld_new(trim('forecast'//cmem), readfld, iens,&
+                  'saln', 1, tlevel, nx, ny)
+             if (tlevel == -1) then
+                if (master) then
+                   print *, 'ERROR: get_mod_fld_new(): failed for "SSS"'
+                end if
+                stop
+             end if
+
+             call Generate_element_Si(S(:, iens), unique_obs(iuobs),&
+                  readfld, depths, nx, ny, nz, 0) 
+          end do
+
        elseif (trim(unique_obs(iuobs)) == 'SST') then
           do iens = 1, nrens
              write(cmem,'(i3.3)') iens

@@ -175,6 +175,7 @@ contains
           dmin = TEM_MIN
           dmax = TEM_MAX
        elseif (trim(unique_obs(uo)) == 'SAL'&
+            .or. trim(unique_obs(uo)) == 'SSS' &
             .or. trim(unique_obs(uo)) == 'GSAL') then
           dmin = SAL_MIN
           dmax = SAL_MAX

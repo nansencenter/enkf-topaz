@@ -39,7 +39,7 @@ contains
     integer , intent(in) :: nrobs
     logical , intent(in) :: master
     character(OBSTYPESTRLEN), intent(in) :: tags(nrobs)
-    real,intent(inout) :: Trobs(nrobs)       ! used for Typobs by localization
+    real,intent(out) :: Trobs(nrobs)       ! used for Typobs by localization
 
     logical :: obsmatch
     integer :: o, uo
@@ -52,14 +52,15 @@ contains
     end if
     nuobs = 0
     unique_obs = ''
+    Trobs=1.0
     do o = 1, nrobs
        obsmatch = .false.
 #if defined(PROF_RADIUS)
        if (trim(tags(o)) == 'SAL' .or. trim(tags(o)) == 'TEM' .or.&
           trim(tags(o)) == 'GSAL' .or. trim(tags(o)) == 'GTEM') then
           Trobs(o)=2.0
-       else
-          Trobs(o)=1
+  !     else
+  !        Trobs(o)=1
        endif 
 #endif
        do uo = 1, nuobs
