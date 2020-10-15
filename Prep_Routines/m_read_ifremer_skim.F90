@@ -135,9 +135,11 @@ depths(imin:imax,jmin:jmax) == depths(imin:imax, jmin:jmax) &
           call random_number(rvar)
           data(ndata) % d =2*rvar
           if (beam_an(l,p)<=6) then
-            data(ndata) % var = 0.04 
+            !data(ndata) % var = 0.04
+            data(ndata) % var = (0.23*5)**2
           elseif (beam_an(l,p)>=12) then
-            data(ndata) % var = 0.17**2 
+            !data(ndata) % var = 0.17**2 
+            data(ndata) % var = (0.19*5)**2
           endif
           data(ndata) % id = trim(obstype)
           data(ndata) % lon = real(lon(l,p))
