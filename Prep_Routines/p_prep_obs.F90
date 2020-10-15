@@ -81,6 +81,7 @@ program p_prep_obs
   integer :: i
   integer :: nthisobs
   integer, allocatable, dimension(:) :: thisobs
+  real,    allocatable, dimension(:) :: typobs
   
   ! try to prepare for change from asynchronously into synchronously
   ! parameter input added by xiejp which useful for proceed TSLA from daily into one week
@@ -121,6 +122,7 @@ program p_prep_obs
   allocate(depths(nx, ny))
   allocate(modlon(nx, ny))
   allocate(modlat(nx, ny))
+  allocate(typobs(maxobs),thisobs(maxobs))
 
   dosuperob = .false.
   is3d = .false.
@@ -269,11 +271,12 @@ program p_prep_obs
      if (trim(obstype) == 'idrft') then
         dosuperob = .false.
         call read_CLS_header(fnamehdr, gr, dataformat, form, factor, var)
-        grpoints = gr % nx ! NB - 2 vector components - irregular grid
+        grpoints = gr % nx     ! NB - 2 vector components - irregular grid
         allocate(data(grpoints))
         allocate(obs(maxobs))
-        call read_CERSAT_data(trim(fname), gr, data, grpoints, var)
-        print *, producer, obstype, 'data has been scaled by a factor = ', factor  
+        !call read_CERSAT_data(trim(fname), gr, data, grpoints, var)
+        call read_CERSAT_data_rep(trim(fname), gr, data, grpoints, var)
+        print *, trim(producer)//": ", obstype, ' data has been scaled by a factor = ', factor  
      else
         print *, 'no data of type "', trim(obstype),'"  from producer "', producer, '" is not handled'
         stop 'ERROR: p_prep_obs'
@@ -281,6 +284,7 @@ program p_prep_obs
 
   elseif (trim(producer) == 'IFREMER') then
 
+     allocate(data(maxobs))
 
      if (trim(obstype) == 'SKIM') then
        dosuperob = .true.
@@ -403,10 +407,10 @@ program p_prep_obs
   !
   call write_wet_file(obs, nrobs)
 
-  call uobs_get(obs(1 : nrobs) % id, nrobs, .true.)
-  allocate(thisobs(nrobs))
+  call uobs_get(obs(1 : nrobs) % id, nrobs,typobs(1:nrobs), .true.)
+  print *,obs(1)%id
   do i = 1, nuobs
-     nthisobs = 0
+     nthisobs =0
      do k = 1, nrobs
         if (trim(unique_obs(i)) == trim(obs(k) % id)) then
            nthisobs = nthisobs + 1
@@ -414,11 +418,11 @@ program p_prep_obs
         end if
      end do
 
-     if (nthisobs > 0) then
+     if (nthisobs > 1) then
         call obs2nc(nthisobs, obs(thisobs(1 : nthisobs)))
      end if
   end do
-  deallocate(thisobs)
+  deallocate(typobs,thisobs)
 
   print *, 'Last observation:'
   print '(a)','   obs       var    id      lon   lat  depth   ipiv  jpiv   nsup'//&

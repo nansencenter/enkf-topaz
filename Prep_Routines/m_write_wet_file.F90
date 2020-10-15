@@ -6,7 +6,7 @@ contains
     use mod_measurement
     implicit none
 
-    type (measurement), intent(inout) :: obs(:)
+    type (measurement), intent(in) :: obs(:)
 
     integer, intent(in):: nrobs
     integer j, i, nrshow
