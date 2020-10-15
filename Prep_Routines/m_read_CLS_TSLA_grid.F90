@@ -103,7 +103,7 @@ contains
     gr%nx=0
     Fpath='./'
     ! Open file
-    do fcount=1,11   !2 satellite Envissat,J2
+    do fcount=1,12   !2 satellite Envissat,J2
        select case(fcount)
        case(1)
           ftemplate=trim(Fpath)//'sla_'//trim(filename)//'_en*.nc'
@@ -127,6 +127,10 @@ contains
           ftemplate = trim(fpath)//'sla_'//trim(filename)//'_h2*.nc'
        case(11)
           ftemplate = trim(fpath)//'sla_'//trim(filename)//'_j3*.nc'
+       case(12)
+          ftemplate = trim(fpath)//'sla_'//trim(filename)//'_s3a.nc'
+       case(13)
+          ftemplate = trim(fpath)//'sla_'//trim(filename)//'_s3b.nc'
        end select
        call fname_fromtemplate(ftemplate, fname)
        inquire(file=trim(fname),exist=ex)

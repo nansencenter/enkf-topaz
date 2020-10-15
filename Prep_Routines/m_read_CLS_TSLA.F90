@@ -221,7 +221,7 @@ contains
     read(julday,'(i7)') age
     read(dayinweek,'(i2)') idayinweek 
     nobs = 0
-    do sid = 1, 14 ! loop over satellite ID
+    do sid = 1, 16 ! loop over satellite ID
        select case(sid)
        case(1)
           ftemplate = trim(fpath)//'sla_'//trim(julday)//'_en.nc'
@@ -244,7 +244,7 @@ contains
           varsat = 0.0009 ! 3 cm for ENVISAT Jason1
           print *, '  Jason1:'
        case(13)
-          ftemplate = trim(fpath)//'sla_'//trim(julday)//'_h2.nc'
+          ftemplate = trim(fpath)//'sla_'//trim(julday)//'_h2*.nc'
           varsat = 0.0016 ! 4 cm for Haiyang2
           print *, '  H2:'
        case(3)
@@ -279,6 +279,14 @@ contains
           ftemplate = trim(fpath)//'sla_'//trim(julday)//'_j3*.nc'
           varsat = 0.0009 !  J3
           print *, '  J3:'
+       case(15)
+          ftemplate = trim(fpath)//'sla_'//trim(julday)//'_s3a.nc'
+          varsat = 0.0009 !  S3a
+          print *, '  S3:'
+       case(16)
+          ftemplate = trim(fpath)//'sla_'//trim(julday)//'_s3b.nc'
+          varsat = 0.0009 !  S3b
+          print *, '  S3:'
        end select
        call fname_fromtemplate(ftemplate, fname)
 
@@ -305,6 +313,8 @@ contains
 !       call nfw_inq_varid(fname, ncid,'SLA', vSLA_ID)
        ! modified by Jiping on 09-June-2017
        call nfw_inq_varid(fname, ncid,'sla_unfiltered', vSLA_ID)
+       ! used by nrt product
+       !call nfw_inq_varid(fname, ncid,'sla_filtered', vSLA_ID)
 
        ! Variable _FillValue attributes
        call nfw_get_att_double(fname, ncid, vSLA_ID, '_FillValue', undef_sla(1))
