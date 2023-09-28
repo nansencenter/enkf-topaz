@@ -270,7 +270,6 @@ program fixhycom_eco
    dpold=dp
 
 
-
    ! DP correction
    do j=1,jdm
    do i=1,idm
@@ -398,7 +397,7 @@ program fixhycom_eco
             if (.not. found) then
                if (cfld == varnames(cc)) then
                   found = .true.
-                  counter = counter + 1
+                  counter = cc!counter + 1
                end if
             endif
          enddo 
@@ -441,7 +440,7 @@ program fixhycom_eco
 	   !  endif
       !       fld(:,:)= tracerf(:,:,vlevel,ktrcr)
          else if (found) then
-            fld(:,:)= tracerf(:,:,vlevel,counter)	    
+            fld(:,:)= tracerf(:,:,vlevel,counter)
 #endif	 
 	 end if ! No correction for other fields in the hycom restart file
 
