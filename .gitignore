@@ -1,2 +1,6 @@
 Prep_Fram
 core.*
+EnKF
+TMP
+*.swp
+*.swo
