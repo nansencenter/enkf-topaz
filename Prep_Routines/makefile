@@ -4,7 +4,7 @@ include ./make.inc
 SHELL = /bin/bash
 VPATH = ..:.:TMP
 
-PROGS=prep_obs
+PROGS=prep_obs_hice
 CHK_OBS=chk_obs
 
 all: $(PROGS) $(CHK_OBS)
@@ -75,9 +75,9 @@ chk_obs: $(CHK_OBS_OBJ)
 	@echo "->chk_obs"
 	@cd ./TMP; $(LD) $(LINKFLAGS) -o ../chk_obs $(CHK_OBS_OBJ) $(LIBS)
 
-prep_obs: $(PREP_OBS_OBJ)
-	@echo "->prep_obs"
-	@cd ./TMP; $(LD) $(LINKFLAGS) -o ../prep_obs $(PREP_OBS_OBJ) $(LIBS)
+prep_obs_hice: $(PREP_OBS_OBJ)
+	@echo "->prep_obs_hice"
+	@cd ./TMP; $(LD) $(LINKFLAGS) -o ../prep_obs_hice $(PREP_OBS_OBJ) $(LIBS)
 
 $(PREP_OBS_OBJ): makefile make.inc MODEL.CPP
 

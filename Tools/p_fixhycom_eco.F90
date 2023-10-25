@@ -88,15 +88,6 @@ program fixhycom_eco
     
     real, dimension(:,:,:), allocatable::temp,sal
     integer::kisop
-
-    character(len=8) :: varname
-    character(len=100) :: headerBIOrestart
-    character(len=24) :: dummy
-    character(len=2) :: dummy2
-    integer :: vlayer, tstep, counter, cc, idummy
-    character(len=8), allocatable :: varnames(:)
-    logical :: found 
-!    real, allocatable :: sigma(:)   
 #endif
 
    icerestart=''
@@ -121,15 +112,9 @@ program fixhycom_eco
    call parse_blkdat('idm   ','integer',rdummy,idm)
    call parse_blkdat('jdm   ','integer',rdummy,jdm)
    call parse_blkdat('kdm   ','integer',rdummy,kdm)
-! #if defined (ECO)
-!       allocate(sigma(kdm))
-!    call parse_blkdat('ntracr','integer',rdummy,ntracr) 	  
-!       do cc=1,kdm
-!          !call parse_blkdat('sigma ','real',sigma(cc),idummy)
-!          call blkinr(sigma(cc), 'sigma ','(a6," =",f10.4," m")')
-!       enddo
-!    write(*,*)sigma
-! #endif
+#if defined (ECO)
+   call parse_blkdat('ntracr','integer',rdummy,ntracr) 	  
+#endif
       
    if (idm>0 .and. idm < 1e4 .and. jdm>0 .and. jdm<1e4) then
       allocate(fld  (idm,jdm))
@@ -183,66 +168,6 @@ program fixhycom_eco
    call get_mod_grid(modlon,modlat,depths,mindx,meandx,idm,jdm)
 
 #if defined (ECO)
-! This will determine the number of biogeochemistry state variables
-! and their names
-
-    open(unit=10, file=restart(1:fnd-1)//'.b', status='old', action='read')
-    read(10, '(A100)') headerBIOrestart
-    read(10, '(A100)') headerBIOrestart
-    
-    varname = "dummyyyy"
-    do while(varname /= "dpmixl")
-       read(10, '(A8)') varname ! reads the 1st dpmixl
-    end do
-    read(10, '(A8)') varname ! reads th 2nd dpmixl
-
-    ! And hopefully at this point, the lines correspond to biogeochemistry state
-    ! variables. Check if this is the case prior to execution
-
-    ntracr = 0
-    do while(.true.)
-        read(10, '(A8,A24,I2,A2,I1)') varname,dummy,vlayer,dummy2,tstep
-        if (vlayer==0) exit
-        if (vlayer == 1 .and. tstep == 1) then
-           ntracr = ntracr + 1
-        end if
-    end do
-
-
-    ! We do the same loop, but this time we have stored "ntracr" which is the
-    ! number of biogeochemistry state variables. The following will store the
-    ! variable names
-    rewind (10)
-    allocate(varnames(ntracr))
-
-    read(10, '(A100)') headerBIOrestart
-    read(10, '(A100)') headerBIOrestart
-
-    varname = "dummyyyy"
-    do while(varname /= "dpmixl")
-       read(10, '(A8)') varname ! reads the 1st dpmixl
-    end do
-    read(10, '(A8)') varname ! reads th 2nd dpmixl
-
-    ! And hopefully at this point, the lines correspond to biogeochemistry state
-    ! variables. Check if this is the case prior to execution
-
-    counter = 0
-    do while(.true.)
-        read(10, '(A8,A24,I2,A2,I1)') varname,dummy,vlayer,dummy2,tstep
-        if (vlayer==0) exit
-        if (vlayer == 1 .and. tstep == 1) then
-           counter = counter + 1
-           varnames(counter) = varname
-        end if
-    end do
-
-
-    close(10)
-
-#endif
-
-#if defined (ECO)
    !files where are stored the forecast fields!
    restfor='forecast'//cmem
    dpthin = onem*0.001
@@ -252,22 +177,23 @@ program fixhycom_eco
    dpsum=0.
    do k=1,kdm
       !call get_mod_fld(dp(:,:,k),1,'dp      ',k,1)
-      call get_mod_fld_new(restart(1:fnd-1),dp(:,:,k),imem,'dp      ',k,1,idm,jdm)
+      call get_mod_fld_new(restart(1:fnd-1),dp(:,:,k),imem,'dp      ',k,1,idm,jdm,0)
       dpsum=dpsum+dp(:,:,k)
 #if defined (ECO)
       !reading of forecast fields: tracers, T and S
-      call get_mod_fld_new(trim(restfor),dpfor(:,:,k),imem,'dp    ',k,1,idm,jdm)
+      call get_mod_fld_new(trim(restfor),dpfor(:,:,k),imem,'dp      ',k,1,idm,jdm,0)
       do ktrcr=1,ntracr
          write(ctrcr,'(i2.2)') ktrcr
-         cfld=varnames(ktrcr) !'tracer'//ctrcr
-         call get_mod_fld_new(trim(restfor),tracerf(:,:,k,ktrcr),imem,cfld,k,1,idm,jdm)
+         cfld='tracer'//ctrcr
+         call get_mod_fld_new(trim(restfor),tracerf(:,:,k,ktrcr),imem,cfld,k,1,idm,jdm,0)
       enddo
-      call get_mod_fld_new(trim(restfor),temp(:,:,k),imem,'temp    ',k,1,idm,jdm)
-      call get_mod_fld_new(trim(restfor),sal(:,:,k),imem,'saln    ',k,1,idm,jdm)
+      call get_mod_fld_new(trim(restfor),temp(:,:,k),imem,'temp    ',k,1,idm,jdm,0)
+      call get_mod_fld_new(trim(restfor),sal(:,:,k),imem,'saln     ',k,1,idm,jdm,0)
 #endif      
    end do
    print *,maxval(dpsum-depths*onem)
    dpold=dp
+
 
 
    ! DP correction
@@ -357,9 +283,6 @@ program fixhycom_eco
    ! Loop over restart file
    rstind=1 ! Restart index
    allok=.true.
-#if defined (ECO)
-   counter = 0
-#endif
    do while ( allok)
 
       ! Get header info from restart
@@ -389,23 +312,12 @@ program fixhycom_eco
 !            call exit(1)
 !         end if
 
-	 call get_mod_fld_new(restart(1:fnd-1),fld(:,:),imem,cfld,vlevel,1,idm,jdm)
-#if defined (ECO) 
-         found = .false.
+	 call get_mod_fld_new(restart(1:fnd-1),fld(:,:),imem,cfld,vlevel,1,idm,jdm,0)
 
-         do cc = 1,ntracr
-            if (.not. found) then
-               if (cfld == varnames(cc)) then
-                  found = .true.
-                  counter = cc!counter + 1
-               end if
-            endif
-         enddo 
-#endif
          if (trim(cfld)=='temp') then
 
             ! need salinity as well
-            call get_mod_fld_new(restart(1:fnd-1),saln(:,:),imem,'saln    ',vlevel,1,idm,jdm)
+            call get_mod_fld_new(restart(1:fnd-1),saln(:,:),imem,'saln    ',vlevel,1,idm,jdm,0)
 
             !if (tlevel==-1) then
             !   print *,'Could not get salinity field'
@@ -431,16 +343,15 @@ program fixhycom_eco
          else if (trim(cfld)=='dp') then
             fld = dp(:,:,vlevel) ! NB, one time level 
 #if defined (ECO)  
-      !    else if (cfld(1:6)=='tracer') then  	    
-	   !  !updating the file!
-	   !  ktrcr=tracr_get_incr(cfld(7:8))
-	   !  if (ktrcr==-1)then
-	   !    print*,'alert tracer unknow'
-	   !    exit
-	   !  endif
-      !       fld(:,:)= tracerf(:,:,vlevel,ktrcr)
-         else if (found) then
-            fld(:,:)= tracerf(:,:,vlevel,counter)
+         else if (cfld(1:6)=='tracer') then  	    
+	    !updating the file!
+	    ktrcr=tracr_get_incr(cfld(7:8))
+	    if (ktrcr==-1)then
+	      print*,'alert tracer unknow'
+	      exit
+	    endif
+            fld(:,:)= tracerf(:,:,vlevel,ktrcr)
+	    
 #endif	 
 	 end if ! No correction for other fields in the hycom restart file
 
@@ -604,6 +515,4 @@ program fixhycom_eco
 !KAL
 !KAL
 !KAL
-
-
 end program

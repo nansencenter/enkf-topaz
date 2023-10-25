@@ -17,8 +17,8 @@ subroutine get_mod_fld(fld,j,cfld,vlevel,tlevel,nx,ny)
    integer,      intent(in)            :: j      ! Ensemble member to read
    real, dimension(nx,ny), intent(out) :: fld    ! output fld
    character(len=*), intent(in)        :: cfld   ! name of fld
-   integer, intent(in)                 :: tlevel ! time level
    integer, intent(in)                 :: vlevel ! vertical level
+   integer, intent(in)                 :: tlevel ! time level
 
    integer reclICE
    real*8, dimension(nx,ny) :: ficem,hicem,hsnwm,ticem,tsrfm
@@ -30,8 +30,8 @@ subroutine get_mod_fld(fld,j,cfld,vlevel,tlevel,nx,ny)
    ! KAL -- shortcut -- the analysis is for observation icec -- this little "if" 
    ! means the  analysis will only work for ice. Add a check though
    if ((trim(cfld)/='icec' .and. trim(cfld)/='hice')  .or. vlevel/=0 .or. tlevel/=1)then
-      if (master) print *,'get_mod_fld only works for icec for now'
-      call stop_mpi()
+      if (master) print *,'get_mod_fld only works for icec for now '//trim(cfld)
+      stop
    end if
 
 !###################################################################
@@ -45,7 +45,7 @@ subroutine get_mod_fld(fld,j,cfld,vlevel,tlevel,nx,ny)
          print *,icefile//' does not exist!'
          print *,'(get_mod_fld)'
       end if
-      call stop_mpi()
+      stop
    end if
    inquire(iolength=reclICE)ficem,hicem,hsnwm,ticem,tsrfm  !,iceU,iceV
    open(10,file=icefile,form='unformatted',access='direct',recl=reclICE,action='read')
@@ -64,10 +64,11 @@ end subroutine get_mod_fld
 
 
 ! KAL - This is for the new file type
-subroutine get_mod_fld_new(memfile,fld,iens,cfld0,vlevel,tlevel,nx,ny)
+subroutine get_mod_fld_new(memfile,fld,iens,cfld0,vlevel,tlevel,nx,ny,Indfield)
    use mod_raw_io
+   use m_get_mod_fld_nc
 #if defined (QMPI)
-   use qmpi, only : qmpi_proc_num, master
+   use qmpi, only : qmpi_proc_num, master,stop_mpi
 #else
    use qmpi_fake
 #endif
@@ -77,8 +78,9 @@ subroutine get_mod_fld_new(memfile,fld,iens,cfld0,vlevel,tlevel,nx,ny)
    real, dimension(nx,ny), intent(out) :: fld    ! output fld
    character(len=*), intent(in)        :: memfile! base name of input files
    character(len=*), intent(in)        :: cfld0   ! name of fld
-   integer, intent(in)                 :: tlevel ! time level
    integer, intent(in)                 :: vlevel ! vertical level
+   integer, intent(in)                 :: tlevel ! time level
+   integer, intent(in)                 :: Indfield ! index in the analysisfields
 
    real*8, dimension(nx,ny) :: readfldr8
    real*4, dimension(nx,ny) :: readfldr4
@@ -86,8 +88,13 @@ subroutine get_mod_fld_new(memfile,fld,iens,cfld0,vlevel,tlevel,nx,ny)
    real :: bmin, bmax
    integer :: indx
 !----------------------------------- 
-   character*80 :: cfld
+   character*80 :: cfld,icefile
    cfld=trim(cfld0)
+#if defined (HYCOM_CICE)
+   if (trim(cfld0) == 'SSH') then
+      cfld='srfhgt'
+   end if
+#endif
 #if defined (SINGLE_RESTART)
    if (trim(cfld0) == 'icec') then
      cfld='ficem'
@@ -97,42 +104,57 @@ subroutine get_mod_fld_new(memfile,fld,iens,cfld0,vlevel,tlevel,nx,ny)
 #endif 
 !----------------------------------- 
    ! Dette fordi is-variablane forelobig er paa gammalt format.
-   if (trim(cfld) /= 'icec' .and. trim(cfld) /= 'hice') then
+   if (trim(cfld) /= 'icec' .and. trim(cfld) /= 'hice' .and. &
+       trim(cfld) /= 'hsnwm' .and. trim(cfld) /= 'aicen' .and. &
+       trim(cfld) /= 'vicen' .and. trim(cfld) /= 'vsnon' .and. &
+       trim(cfld) /= 'ticem' .and. trim(cfld) /= 'tsrfm' .and. & 
+       trim(cfld) /= 'sicem' .and. trim(cfld) /= 'tsnom' .and. & 
+       trim(cfld) /= 'ficem' .and. trim(cfld) /= 'hicem') then
 
       ! KAL - 1) f kva index som skal lesast finn vi fraa .b fil (header)
-      call rst_index_from_header(trim(memfile)//'.b', & ! filnavn utan extension
+      ! working well for restart file
+      indx=0;
+      if (Indfield>=0) then
+          call rst_index_from_header(trim(memfile)//'.b', & ! filnavn utan extension
                                  cfld               , & ! felt som skal lesast fex saln,temp
                                  vlevel,              & ! vertikalnivaa
                                  tlevel,              & ! time level - kan vere 1 eller 2 - vi bruker 1 foreloepig
                                  indx,                & ! indexen som maa lesas fra data fila
                                  bmin,bmax,           & ! min/max - kan sjekkast mot det som er i datafila
                                  .true. )
+      else
+          call daily_index_from_header(trim(memfile)//'.b', & ! filnavn utan extension
+                                 cfld               , & ! felt som skal lesast fex saln,temp
+                                 vlevel,              & ! vertikalnivaa
+                                 indx,                & ! indexen som maa lesas fra data fila
+                                 bmin,bmax,iens)        ! min/max - kan sjekkast mot det som er i datafila
+
+      endif
 
       if (indx < 0) then
          if (master) then
-            print *, 'ERROR: get_mod_fld_new(): ', trim(memfile), '.b: "',&
-                 trim(cfld), '" not found'
+            print *, 'ERROR: get_mod_fld_new() to read ', trim(memfile), '.b: "',&
+                 trim(cfld), '" not found for ',indx
          end if
          stop
       end if
 
       ! KAL -- les datafelt vi fann fraa header fila (indx)
-      spval=0.
+      spval=2**100
       call READRAW(readfldr4          ,& ! Midlertidig felt som skal lesast
                    amin, amax         ,& ! max/min fraa data (.a) fila 
                    nx,ny              ,& ! dimensjonar
-                   .false.,spval      ,& ! dette brukast for  sette "no value" verdiar
+                   .true.,spval      ,& ! dette brukast for  sette "no value" verdiar
                    trim(memfile)//'.a',& ! fil som skal lesast fraa
                    indx)                 ! index funne over
 
      ! Sjekk p at vi har lest rett - samanlign max/min fr filene
      if     (abs(amin-bmin).gt.abs(bmin)*1.e-4 .or. &
              abs(bmax-amax).gt.abs(bmax)*1.e-4     ) then
-        print *,'Inconsistency between .a and .b files'
+        print *,'Inconsistency between .a and .b files (m_get_mod_fld)'
         print *,'.a : ',amin,amax
         print *,'.b : ',bmin,bmax
-        print *,cfld,vlevel,tlevel
-        print *,indx
+        print *,trim(cfld),vlevel,tlevel, indx
         print *,'node ',qmpi_proc_num
         call exit(1)
      end if
@@ -140,7 +162,30 @@ subroutine get_mod_fld_new(memfile,fld,iens,cfld0,vlevel,tlevel,nx,ny)
 
    else ! fld = fice, hice
       ! Gammal rutine ja
+#if defined(HYCOM_CICE)
+      indx=-1
+      icefile=trim(memfile)//'.nc'
+      call get_mod_fld_nc(trim(icefile), readfldr8, &
+                  cfld, vlevel, indx, nx, ny)
+      if (indx==-1) then
+         icefile='ice_'//trim(memfile)//'.nc'
+         call get_mod_fld_nc(trim(icefile), readfldr8, &
+                  cfld, vlevel, indx, nx, ny)
+      end if
+      if (indx < 0) then
+         if (master) then
+            print *, 'ERROR: get_mod_fld_new(): ', trim(icefile),&
+                 trim(cfld), '" not found for ', vlevel
+            stop
+         end if
+         stop
+!      else
+!         print *, trim(icefile), ' '//trim(cfld), vlevel,Indfield
+      end if
+
+#else
       call get_mod_fld(readfldr8,iens,cfld,0,1,nx,ny)
+#endif
       fld=readfldr8
    end if
 

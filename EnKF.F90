@@ -1,4 +1,3 @@
-! File:          EnKF.F90
 !
 ! Created:       ???
 !
@@ -55,6 +54,8 @@ program EnKF
   use m_prep_4_EnKF
   use m_set_random_seed2
   use m_get_mod_fld
+  use nfw_mod
+  use m_get_mod_fld_nc
   use m_put_mod_fld
   use mod_analysisfields
   use m_parse_blkdat
@@ -101,7 +102,9 @@ program EnKF
   real :: mindx
   real :: meandx
   integer :: m1, m2, nfields
-  real :: infls(NFIELD)
+  real    :: infls(NFIELD)
+  integer :: vflag
+  logical :: Tflag
 
 #if defined(QMPI)
   call start_mpi()
@@ -172,9 +175,6 @@ program EnKF
       print '(a, a, a, e10.3, a, e10.3)', '   last obs = "', trim(obs(nobs) % id),&
            '", v = ', obs(nobs) % d, ', var = ', obs(nobs) % var
    end if
-   if (master) then
-      print *
-   end if
 
    ! read ensemble size and store in A
    !
@@ -229,6 +229,9 @@ program EnKF
    ! get fieldnames and fieldlevels
    !
    call get_analysisfields()
+   if (master) then
+      print *, 'numfields_hycom=', numfields_hycom, numfields
+   end if
 
    call distribute_iterations(numfields)
 #if defined(QMPI)
@@ -238,20 +241,21 @@ program EnKF
    do m1 = my_first_iteration, my_last_iteration, NFIELD
       m2 = min(my_last_iteration, m1 + NFIELD - 1)
       nfields = m2 - m1 + 1
-
+      !print *, 'nfields=', nfields
       do m = m1, m2
          print '(a, i2, a, i3, a, a6, a, i3, a, f11.0)',&
               "I am ", qmpi_proc_num, ', m = ', m, ", field = ",&
-              fieldnames(m), ", k = ", fieldlevel(m), ", time = ",&
+              trim(fieldnames(m)), ", k = ", fieldlevel(m), ", time = ",&
               rtc() - time2
          do k = 1, ENSSIZE
             write(cmem, '(i3.3)') k
             memfile = 'forecast' // cmem
             call get_mod_fld_new(trim(memfile), readfld, k, fieldnames(m),&
-                 fieldlevel(m), 1, idm, jdm)
+                 fieldlevel(m), 1, idm, jdm,fieldindex(m))
             ! reshaping and conversion to real(4)
             fld(:, ENSSIZE * (m - m1) + k) = reshape(readfld, (/idm * jdm/))
          end do
+   
          call p2nc_storeforecast(idm, jdm, ENSSIZE, numfields, m, fld(:, ENSSIZE * (m - m1) + 1 : ENSSIZE * (m + 1 - m1)))
          infls(m - m1 + 1) = prm_getinfl(trim(fieldnames(m)));
       end do
@@ -267,8 +271,11 @@ program EnKF
             ! reshaping and conversion to real(8)
             readfld = reshape(fld(:, ENSSIZE * (m - m1) + k), (/idm, jdm/))
             write(text_string, '(a, i3.3)') '_proc', qmpi_proc_num
+
+            !print *,  fieldnames(m), fieldlevel(m), fieldindex(m)
             call put_mod_fld(trim(memfile) // trim(text_string), readfld, k,&
-                 fieldnames(m), fieldlevel(m), 1, fieldcounter, idm, jdm)
+                fieldnames(m), fieldlevel(m), 1, fieldcounter, idm, jdm)
+
          end do
       end do
    end do

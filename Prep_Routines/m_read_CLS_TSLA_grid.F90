@@ -128,9 +128,7 @@ contains
        case(11)
           ftemplate = trim(fpath)//'sla_'//trim(filename)//'_j3*.nc'
        case(12)
-          ftemplate = trim(fpath)//'sla_'//trim(filename)//'_s3a.nc'
-       case(13)
-          ftemplate = trim(fpath)//'sla_'//trim(filename)//'_s3b.nc'
+          ftemplate = trim(fpath)//'sla_'//trim(filename)//'_s3*.nc'
        end select
        call fname_fromtemplate(ftemplate, fname)
        inquire(file=trim(fname),exist=ex)

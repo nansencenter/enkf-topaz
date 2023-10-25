@@ -78,6 +78,8 @@ program p_obsstats
    integer :: iuobs
 
    integer :: ios
+   logical                         :: tmpT
+   real, dimension(:), allocatable :: Obsind 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Read the characteristics of the assimilation to be carried out.
@@ -147,7 +149,10 @@ program p_obsstats
 time0 = rtc()
 
 ! KAL -- move ssh stuff in here, as well as reading "observed" variable
-   call uobs_get(obs%id, nobs, .true.)
+   tmpT=.true.
+   allocate(Obsind(nobs))
+   call uobs_get(obs%id, nobs, Obsind, tmpT)
+
    call obs_prepareobs
    print*, 'Unique obs ', unique_obs(:)
    call prep_4_EnKF(nrens,d,S,depths,meandx*0.001,idm,jdm,kdm)

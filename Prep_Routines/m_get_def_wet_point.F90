@@ -156,7 +156,7 @@ contains
        do ii = max(ipiv - ncells, 1), min(ipiv + ncells, nx)
           griddist = spherdist(modlon(ii, jj), modlat(ii, jj), obslon, obslat)
           if ((depths(ii,jj) < 1.or.depths(ii,jj)>20000) .and. griddist < Vdis) then
-          !   print *, 'land_nearby: ',ipiv,jpiv
+             print *, 'land_nearby: ',ipiv,jpiv
           !   print *,modlon(ii, jj), modlat(ii, jj), obslon, obslat
           !   print *,griddist,depths(ii,jj)
              land_nearby = .true.

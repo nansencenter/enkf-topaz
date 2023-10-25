@@ -1,7 +1,7 @@
 MPI = NO
 include ../make.inc
 
-VPATH = ../:./:TMP
+VPATH = ../:./:TMP/
 
 PROGS = EnKF_assemble\
 checkice\
@@ -27,8 +27,9 @@ mod_raw_io.o\
 m_parse_blkdat.o\
 m_put_mod_fld.o\
 m_get_mod_grid.o\
-m_get_mod_fld.o\
 nfw.o\
+m_get_mod_fld_nc.o\
+m_get_mod_fld.o\
 mod_testinfo.o\
 p_consistency.o
 
@@ -42,6 +43,8 @@ CHECK_ICE_OBJ_EN = qmpi.o\
 mod_raw_io.o\
 m_parse_blkdat.o\
 m_get_mod_grid.o\
+nfw.o\
+m_get_mod_fld_nc.o\
 m_get_mod_fld.o\
 p_check_ice_en.o
 
@@ -52,7 +55,12 @@ mod_raw_io.o\
 m_parse_blkdat.o\
 m_put_mod_fld.o\
 m_get_mod_grid.o\
+nfw.o\
+mod_cice_constants.o\
+mod_mush_ktherm.o\
+m_get_mod_fld_nc.o\
 m_get_mod_fld.o\
+m_put_mod_fld_nc.o\
 p_fixhycom.o
 
 FIXHYCOM_ECO_OBJ = qmpi.o\
@@ -61,6 +69,8 @@ mod_raw_io.o\
 m_parse_blkdat.o\
 m_put_mod_fld.o\
 m_get_mod_grid.o\
+nfw.o\
+m_get_mod_fld_nc.o\
 m_get_mod_fld.o\
 distribute.o\
 p_fixhycom_eco.o
@@ -81,6 +91,7 @@ m_insitu.F90\
 m_obs.F90\
 m_set_random_seed2.F90\
 mod_sphere_tools.F90\
+m_get_mod_fld_nc.F90\
 m_get_mod_fld.F90\
 m_random.F90\
 m_prep_4_EnKF.F90\
@@ -104,6 +115,7 @@ m_Generate_element_Si.o: m_parse_blkdat.o mod_measurement.o m_get_mod_fld.o m_in
 m_insitu.o: nfw.o
 m_get_mod_nrens.o: qmpi.o
 m_obs.o : m_parameters.o m_uobs.o
+m_get_mod_fld.o : nfw.o m_get_mod_fld_nc.o
 
 $(ENKF_ASSEMBLE_OBJ) $(CONSISTENCY_OBJ) $(FIXHYCOM_ECO_OBJ) $(FIXHYCOM_OBJ) $(OBSSTATS_OBJ) $(OLDTONEWOBS_OBJ): MODEL.CPP makefile
 

@@ -221,7 +221,7 @@ contains
     read(julday,'(i7)') age
     read(dayinweek,'(i2)') idayinweek 
     nobs = 0
-    do sid = 1, 16 ! loop over satellite ID
+    do sid = 1, 15 ! loop over satellite ID
        select case(sid)
        case(1)
           ftemplate = trim(fpath)//'sla_'//trim(julday)//'_en.nc'
@@ -280,12 +280,8 @@ contains
           varsat = 0.0009 !  J3
           print *, '  J3:'
        case(15)
-          ftemplate = trim(fpath)//'sla_'//trim(julday)//'_s3a.nc'
+          ftemplate = trim(fpath)//'sla_'//trim(julday)//'_s3*.nc'
           varsat = 0.0009 !  S3a
-          print *, '  S3:'
-       case(16)
-          ftemplate = trim(fpath)//'sla_'//trim(julday)//'_s3b.nc'
-          varsat = 0.0009 !  S3b
           print *, '  S3:'
        end select
        call fname_fromtemplate(ftemplate, fname)
@@ -395,8 +391,11 @@ contains
     
     do o = 1, nrobs
        reo = re(obs(o) % ipiv, obs(o) % jpiv)
-       if (reo < 0 .or. reo > 1.0d5) then
+       if ( reo > 1.0d5) then
+       !if (reo < 0 .or. reo > 1.0d5) then
           cycle
+       elseif (reo<0) then
+          reo=0
        end if
        ! PS 1.4.2010 Increased the multiple for representation error from
        ! 0.3 to 0.5 - it seems that with 0.3 it wants to do more in the Gulf

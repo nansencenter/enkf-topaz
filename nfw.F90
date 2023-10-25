@@ -59,9 +59,8 @@
 ! 29/04/2008 PS: added nfw_rename_var(fname, ncid, oldname, newname)
 ! 21/10/2009 PS: added nfw_var_exists(ncid, name)
 ! 22/10/2009 PS: added nfw_put_att_double(fname, ncid, varid, attname, type, 
-!
+!                                         length, v)
 ! 06/11/2009 PS: added nfw_dim_exists(ncid, name)
-! 20/09/2019 PS: added nfw_var_att_exists(ncid, varid, attname, type,length)
 !                nfw_put_att_real(fname, ncid, varid, attname, type, length, v)
 !                nfw_get_att_real(fname, ncid, varid, attname, v)
 
@@ -71,7 +70,7 @@ module nfw_mod
 
   character(*), private, parameter :: nfw_version = "0.03"
   integer, private, parameter :: logunit = 6
-  character(*), private, parameter :: errprefix = "nfw: error:          "
+  character(*), private, parameter :: errprefix = "nfw: error: "
   private quit1, quit2, quit3
 
 contains
@@ -515,6 +514,53 @@ contains
     end if
   end subroutine nfw_get_var_double
 
+  subroutine nfw_get_var_double2D(fname, ncid, varid, vlevel,v,nx,ny)
+    character*(*), intent(in) :: fname
+    integer, intent(in) :: ncid
+    integer, intent(in) :: varid
+    integer, intent(in) :: vlevel,nx,ny
+    real(8), intent(out) :: v(nx,ny)
+
+    character*(NF_MAX_NAME) :: name
+    integer :: status
+    integer :: ndims
+    integer :: idims(3), vdims(3)
+    real(8), allocatable :: tmpfld(:,:,:)
+    integer              :: len1,len2,len3
+ 
+    ! inquire ndims for this variable
+    status=nf_inq_varndims(ncid,varid,ndims)
+    if (status /= 0) then
+       call quit2(fname, 'nf_get_var_double2D', 'inq_ndims', status)
+    end if
+    if (ndims==3) then   ! ni, nj, ncat or other order
+      status = nf_inq_dimid(ncid, 'ni',idims(1))
+      status = nf_inq_dimid(ncid, 'nj',idims(2))
+      status = nf_inq_dimid(ncid, 'ncat',idims(3))
+!      print *, 'dims order: ', idims(:)
+      status = nf_inq_vardimid(ncid, varid,vdims)
+      status=nf_inq_dim(ncid,vdims(1),name,len1)
+      status=nf_inq_dim(ncid,vdims(2),name,len2)
+      status=nf_inq_dim(ncid,vdims(3),name,len3)
+!      print *, 'variable dims order: ', vdims(:),len1,len2,len3
+      allocate(tmpfld(len1,len2,len3))
+      status = nf_get_var_double(ncid, varid, tmpfld)
+!      status = nf_get_var_double(ncid, varid, (/1,1,vlevel/),(/len1,len2,1/),v)
+      if (status /= 0) then
+         call nfw_inq_varname(fname, ncid, varid, name)
+         call quit2(fname, 'nfw_get_var_double2D', name, status)
+      end if
+      v=tmpfld(:,:,vlevel); 
+      deallocate(tmpfld)
+    end if 
+
+    !status = nf_get_var_double(ncid, varid, istart,icount,v)
+    if (status /= 0) then
+       call nfw_inq_varname(fname, ncid, varid, name)
+       call quit2(fname, 'nf_get_var_double2D', name, status)
+    end if
+  end subroutine nfw_get_var_double2D
+
   subroutine nfw_get_var_text(fname, ncid, varid, v)
     character*(*), intent(in) :: fname
     integer, intent(in) :: ncid
@@ -567,6 +613,7 @@ contains
     end if
   end subroutine nfw_put_vara_double
 
+
   subroutine nfw_get_vara_int(fname, ncid, varid, start, length, v)
     character*(*), intent(in) :: fname
     integer, intent(in) :: ncid
@@ -602,6 +649,7 @@ contains
        call quit2(fname, 'nf_get_vara_double', name, status)
     end if
   end subroutine nfw_get_vara_double
+
 
   subroutine nfw_get_att_int(fname, ncid, varid, attname, v)
     character*(*), intent(in) :: fname
@@ -806,19 +854,6 @@ contains
     status = nf_inq_varid(ncid, trim(name), varid)
     nfw_var_exists = (status == 0)
   end function nfw_var_exists
-
-
-  logical function nfw_var_att_exists(ncid,varid, name)
-    integer, intent(in) :: ncid,varid
-    character*(*), intent(in) :: name
-
-    integer :: status
-    integer :: cxtype,cnlen
-
-    status = nf_inq_att(ncid, varid, trim(name),cxtype,cnlen)
-    nfw_var_att_exists = (status == 0)
-  end function nfw_var_att_exists
-
 
   logical function nfw_dim_exists(ncid, name)
     integer, intent(in) :: ncid
