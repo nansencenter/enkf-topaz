@@ -423,7 +423,7 @@ contains
     nlobs_array = 0
     do jj = my_first_iteration, my_last_iteration
        j = jmap(jj)
-       print *, 'calc_X5(): jj =', jj, 'j =', j
+       !print *, 'calc_X5(): jj =', jj, 'j =', j
 
        do i = 1, ni
           ! data dumping flag
@@ -945,7 +945,8 @@ contains
     integer :: uo
 
     fname = 'enkf_diag.nc'
-    call nfw_create(fname, nf_clobber, ncid)
+    call nfw_create(fname, nf_netcdf4, ncid)
+    !call nfw_create(fname, nf_clobber, ncid)
     
     call nfw_def_dim(fname, ncid, 'i', ni, dimids(1))
     call nfw_def_dim(fname, ncid, 'j', nj, dimids(2))

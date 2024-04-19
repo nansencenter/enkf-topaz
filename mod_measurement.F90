@@ -8,8 +8,6 @@ module mod_measurement
      character(len=OBSTYPESTRLEN) id ! Type, can be one of those:
                                   ! 'SST' 'SLA' 'ICEC' 'SAL' 'TEM'
                                   ! 'GSAL' 'GTEM' 'TSLA'
-                                  ! 'SSS'
-
      real lon                     ! Longitude position
      real lat                     ! Latitude position
      real depth                   ! depths of position 
@@ -34,7 +32,6 @@ module mod_measurement
   type measurement_info
      character(len=OBSTYPESTRLEN) id ! Type, can be one of those:
                                   ! 'SST' 'SLA' 'ICEC' 'SAL' 'TEM'
-                                  ! 'SSS'
      real jday,jtime              ! julian date and time in the day
      real lon                     ! Longitude position
      real lat                     ! Latitude position

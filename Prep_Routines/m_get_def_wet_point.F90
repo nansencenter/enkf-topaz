@@ -33,7 +33,8 @@ contains
     integer, intent(out) :: nrobs
     integer, parameter :: maxobs = 1441 * 760 !2*400*600 ! maximum number of observations
 
-    real, dimension(nx, ny) :: mean_ssh
+    real,   dimension(nx, ny) :: mean_ssh
+    integer,dimension(nx, ny) :: SSHmask 
     integer k, imin, imax, jmin, jmax
     integer ipiv, jpiv, nsupport, nsmin, nsmax
     real :: x0, y0
@@ -56,7 +57,8 @@ contains
     !Put the data into the obs data structture
     !Compute bilinear coefficients
     print *, 'test: ',gridpoints(gr), ' !!'
-    call read_mean_ssh(mean_ssh, nx, ny)
+    call read_mean_ssh(mean_ssh, nx, ny,SSHmask)
+
 
     do k = 1, gridpoints(gr)
        if (data(k) % id .eq. 'SLA' .or. data(k) % id .eq. 'sla' .or. &
@@ -82,7 +84,10 @@ contains
        if (data(k) % id .eq. 'SLA' .or. data(k) % id .eq. 'sla' .or.&
             data(k) % id .eq. 'TSLA') then
           wet = wet .and. .not. land_nearby(nx, ny, depths, modlon, modlat,&
-               ipiv, jpiv, data(k) % lon, data(k) % lat,50000.0)
+               ipiv, jpiv, data(k) % lon, data(k) % lat,50000.0).and. &
+               .not. isnan(mean_ssh(ipiv,jpiv))
+          wet = wet .and. .not. filter_meanssh(nx,ny,depths,SSHmask,ipiv,jpiv)
+          wet = wet .and. data(k)%lat<85.0
        endif
        if (data(k) % id .eq. 'HICE') then
           wet = wet .and. .not. land_nearby(nx, ny, depths, modlon, modlat,&
@@ -121,9 +126,10 @@ contains
   end subroutine get_def_wet_point
 
 
-  subroutine read_mean_ssh(mean_ssh, nx, ny)
+  subroutine read_mean_ssh(mean_ssh, nx, ny,Imask)
     integer, intent(in) :: nx, ny
-    real, intent(out):: mean_ssh(nx, ny)
+    real,    intent(out):: mean_ssh(nx, ny)
+    integer,  intent(out):: Imask(nx, ny)
     logical :: exists
 
     inquire(file = trim(MEANSSHFNAME), exist = exists)
@@ -135,6 +141,10 @@ contains
     open (10, file = trim(MEANSSHFNAME), status = 'unknown',form = 'unformatted')
     read (10) mean_ssh
     close (10)
+    Imask=0
+    where (abs(mean_ssh)<3)
+        Imask=1
+    end where
   end subroutine read_mean_ssh
 
 
@@ -165,5 +175,25 @@ contains
        enddo
     enddo
   end function land_nearby
+
+  logical function filter_meanssh(nx, ny, depths, Imask, ipiv, jpiv)
+    implicit none
+    integer,                  intent (in) :: nx, ny, ipiv, jpiv
+    real,    dimension(nx,ny), intent(in) :: depths
+    integer, dimension(nx,ny), intent(in) :: Imask
+    integer :: ii, jj
+
+    filter_meanssh=.false.
+    do jj = max(jpiv-1,1),min(jpiv+1,ny)
+       do ii = max(ipiv-1,1), min(ipiv+1, nx)
+          if ((depths(ii,jj) < 1.or.depths(ii,jj)>20000) .and. Imask(ii,jj)==0 ) then
+             filter_meanssh=.true.
+             return
+          end if
+       enddo
+    enddo
+  end function filter_meanssh
+
+
 
 end module m_get_def_wet_point

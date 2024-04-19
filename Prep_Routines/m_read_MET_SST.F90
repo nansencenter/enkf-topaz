@@ -26,7 +26,7 @@ contains
     real*8, dimension(1) :: undef_sst
     integer :: i, j, count1
     real, parameter :: eps = 0.01  ! test for undefined values
-#if defined (CCI_SST)
+#if (defined CCI_SST || defined C3S_SST || defined NRT_SST)
     real, parameter :: Lscale = 6  ! enlarge times
 #else
     real, parameter :: Lscale = 8  ! enlarge times default used after 2018 
@@ -50,6 +50,8 @@ contains
        call nfw_inq_varid(filename, ncid,'analysed_sst' ,vsst_ID)
 #if defined (CCI_SST)
        call nfw_inq_varid(filename, ncid,'analysed_sst_uncertainty' ,vstd_ID)
+#elif defined (C3S_SST)
+       call nfw_inq_varid(filename, ncid,'analysis_uncertainty' ,vstd_ID)
 #else
        call nfw_inq_varid(filename, ncid,'analysis_error' ,vstd_ID)
 #endif

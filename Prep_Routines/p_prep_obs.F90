@@ -51,7 +51,7 @@ program p_prep_obs
   use m_uobs
   implicit none
 
-  integer, parameter :: STRLEN =2180 
+  integer, parameter :: STRLEN =4000 
 
   type (measurement), allocatable :: data(:)
   type (measurement), allocatable :: obs(:)
@@ -77,6 +77,10 @@ program p_prep_obs
   logical :: is3d
   integer :: nrsobs
   type(measurement), allocatable :: sobs(:)
+
+  integer :: nrsobs1,nrsobs2
+  type(measurement), allocatable :: sobs1(:),sobs2(:)
+  character(len=5) :: obstype1,obstype2
 
   integer :: i
   integer :: nthisobs
@@ -268,14 +272,19 @@ program p_prep_obs
      endif
 
   else if (trim(producer) == 'CERSAT') then
-     if (trim(obstype) == 'idrft') then
+     if (index(obstype,'idrf')>0) then
+        print *, 'CERSAT Ice Drift: ', obstype
+        offset = obstype(5:5)
+        print *, '          Offset: ', offset ! The number of days before analysis day
         dosuperob = .false.
+        !dosuperob = .true.
         call read_CLS_header(fnamehdr, gr, dataformat, form, factor, var)
         grpoints = gr % nx     ! NB - 2 vector components - irregular grid
+        print *, 'grpoints=',gr%nx
         allocate(data(grpoints))
         allocate(obs(maxobs))
         !call read_CERSAT_data(trim(fname), gr, data, grpoints, var)
-        call read_CERSAT_data_rep(trim(fname), gr, data, grpoints, var)
+        call read_CERSAT_data_rep(trim(fname), gr, data, grpoints, var,offset)
         print *, trim(producer)//": ", obstype, ' data has been scaled by a factor = ', factor  
      else
         print *, 'no data of type "', trim(obstype),'"  from producer "', producer, '" is not handled'
@@ -385,14 +394,28 @@ program p_prep_obs
   ! Superob dense 2D data
   !
   if (dosuperob) then
-     allocate(sobs(nrobs))
-     call superob(obstype, nrobs, obs, nx, ny, modlon, modlat, nrsobs, sobs, is3d)
+     if (index(trim(obstype),'idrf')==0) then
+        allocate(sobs(nrobs))
+        call superob(obstype, nrobs, obs, nx, ny, modlon, modlat, nrsobs, sobs, is3d)
      
-     deallocate(obs)
-     allocate(obs(nrsobs))
-     obs = sobs(1 : nrsobs)
-     nrobs = nrsobs
-     deallocate(sobs)
+        deallocate(obs)
+        allocate(obs(nrsobs))
+        obs = sobs(1 : nrsobs)
+        nrobs = nrsobs
+        deallocate(sobs)
+     else
+        allocate(sobs1(nrobs),sobs2(nrobs))
+        obstype1=trim('DX')//trim(obstype(5:5))
+        call superob(obstype1, nrobs, obs, nx, ny, modlon, modlat, nrsobs1, sobs1, is3d)
+        obstype2=trim('DY')//trim(obstype(5:5))
+        call superob(obstype2, nrobs, obs, nx, ny, modlon, modlat, nrsobs2, sobs2, is3d)
+        nrobs = nrsobs1+nrsobs2
+        deallocate(obs)
+        allocate(obs(nrobs))
+        obs(1:nrsobs1)=sobs1(1:nrsobs1)
+        obs(nrsobs1+1:nrobs)=sobs2(1:nrsobs2) 
+        deallocate(sobs1,sobs2)
+     end if
   end if
 
   if (nrobs .ge. maxobs) then

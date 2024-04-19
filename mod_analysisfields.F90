@@ -8,6 +8,7 @@
 !KAL --    numfields   - total number of fields to process
 !KAL --    fieldnames  - the names of the fields we wish to analyze
 !KAL --    fieldlevel  - the levels of the associated fields
+!JPX --    numfields_hycom  - recording the total number of hycom file
 !KAL --
 !KAL -- Ex: If we only want to assimilate temperatures in layer
 !KAL --     one and two, numfields, fieldnames and fieldlevel 
@@ -41,6 +42,12 @@ character(len=*), parameter :: infile='analysisfields.in'
 integer :: numfields
 character(len=8), dimension(:), allocatable:: fieldnames
 integer         , dimension(:), allocatable:: fieldlevel 
+integer         , dimension(:), allocatable:: fieldindex
+
+integer                     :: numfields_hycom
+#if defined (HYCOM_CICE)
+character(len=*), parameter :: infile_ice='analysisfields_ice.in'
+#endif
 
 contains
 
@@ -66,10 +73,37 @@ contains
    get_nrfields=0
    do while (ios==0)
       read(10,100,iostat=ios) char8,first,last
-      if (ios==0) get_nrfields=get_nrfields+last-first+1
+      if (ios==0) then
+         get_nrfields=get_nrfields+last-first+1
+      end if
    end do
    close(10)
    100 format (a8,2i3)
+
+   numfields_hycom=get_nrfields
+#if defined (HYCOM_CICE)
+   inquire(exist=ex,file=infile_ice)
+
+!   if (.not. ex) then
+!      if (master) print *,'Could not find '//infile_ice
+!      call stop_mpi()
+!   end if
+   if (ex) then
+     open(10,status='old',form='formatted',file=infile_ice,action='read')
+     ios=0
+     do while (ios==0)
+       read(10,200,iostat=ios) char8,first,last
+       if (ios==0) get_nrfields=get_nrfields+last-first+1
+     end do
+     close(10)
+   else
+     if (master) print *,'Could not find '//infile_ice
+!      call stop_mpi()
+   end if
+
+   200 format (a8,2i3)
+#endif
+
    end function
 
    subroutine get_analysisfields()
@@ -82,6 +116,7 @@ contains
    integer :: first,last,k,nfld,ios
    logical :: ex
    character(len=8) :: char8
+   integer          :: k0
 
    numfields=get_nrfields()
    if (master) print *,'numfields is ',numfields
@@ -91,6 +126,7 @@ contains
    end if
    allocate(fieldnames(numfields))
    allocate(fieldlevel(numfields))
+   allocate(fieldindex(numfields))
 
 
    inquire(exist=ex,file=infile)
@@ -100,7 +136,7 @@ contains
    end if
 
    open(10,status='old',form='formatted',file=infile,action='read')
-
+   k0=0
    ios=0
    nfld=0
    do while (ios==0)
@@ -109,6 +145,8 @@ contains
          do k=first,last
             fieldnames (nfld+k-first+1)=char8
             fieldlevel (nfld+k-first+1)=k
+            k0=k0+1
+            fieldindex (nfld+k-first+1)=k0
          end do
          nfld=nfld+last-first+1
       end if
@@ -116,14 +154,40 @@ contains
    close(10)
    100 format (a8,2i3)
 
+
+#if defined (HYCOM_CICE)
+   inquire(exist=ex,file=infile_ice)
+   if (ex) then
+     open(10,status='old',form='formatted',file=infile_ice,action='read')
+     ios=0
+     do while (ios==0)
+        read(10,200,iostat=ios) char8,first,last
+        if (ios==0) then
+           do k=first,last
+              fieldnames (nfld+k-first+1)=char8
+              fieldlevel (nfld+k-first+1)=k
+              k0=k0+1
+              fieldindex (nfld+k-first+1)=k0
+           end do
+           nfld=nfld+last-first+1
+        end if
+     end do
+     close(10)
+   else
+      if (master) print *,'Could not find '//infile_ice
+    !  call stop_mpi()
+   end if
+   200 format (a8,2i3)
+#endif
+
    if (nfld/=numfields) then
-      if (master) print *,'An error occured when reading '//infile
+      if (master) print *,'An error occured when reading '//infile, ' ', nfld
       call stop_mpi()
    end if
 
    ! List fields used in analysis
    do k=1,numfields
-      if (master) print *,fieldnames(k),fieldlevel(k)
+      if (master) print *,fieldnames(k),fieldlevel(k),fieldindex(k)
    end do
 
    end subroutine

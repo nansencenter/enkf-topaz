@@ -4,4 +4,7 @@
 #undef BLACK_PROFILE
 #define CYSMOS_Error
 #define CYSMOSV2
+#undef NRT_SST 
 #define CCI_SST 
+#undef C3S_SST 
+#define Rio22 

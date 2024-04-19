@@ -49,6 +49,9 @@
 !          nfw_put_att_real(fname, ncid, varid, attname, type, length, v)
 !          nfw_put_att_double(fname, ncid, varid, attname, type, length, v)
 !
+!          nfw_get_var_strings(fname,ncid,varid,varstring,Sn1,Sn2)
+!          nfw_put_var_strings(fname,ncid,varid,varstring,Sn1,Sn2)
+!
 !          Derived procedures:
 !
 !          nfw_get_var_double_firstrecord(fname, ncid, varid, v)
@@ -71,7 +74,7 @@ module nfw_mod
 
   character(*), private, parameter :: nfw_version = "0.03"
   integer, private, parameter :: logunit = 6
-  character(*), private, parameter :: errprefix = "nfw: error:          "
+  character(*), private, parameter :: errprefix = "nfw: error: "
   private quit1, quit2, quit3
 
 contains
@@ -371,6 +374,37 @@ contains
     endif
   end subroutine
 
+  subroutine nfw_put_var_strings(fname,ncid,varid,varstring,Sn1,Sn2)
+    character*(*),  intent(in) :: fname
+    integer,   intent(in)      :: ncid
+    integer,   intent(in)      :: varid
+    integer,   intent(in)      :: Sn1,Sn2
+    character, intent(in)     :: varstring (Sn1,Sn2)
+ 
+    integer ::  ndims,dimid,len_var    
+    integer :: dimids(NF_MAX_VAR_DIMS)
+    integer :: status
+    character*(NF_MAX_NAME) :: name
+
+    call nfw_inq_varndims(fname, ncid, varid, ndims)
+
+    if(ndims==1)then
+       status = nf_put_var_text(ncid,varid,varstring)
+       if (status /= 0) then
+         call nfw_inq_varname(fname, ncid, varid, name)
+         call quit2(fname, 'nf_get_var_strings', name, status)
+       endif
+    elseif(ndims==2) then
+       status=nf_put_var_text(ncid,varid,varstring)
+       if (status /= 0) then
+         call nfw_inq_varname(fname, ncid, varid, name)
+         call quit2(fname, 'nf_put_var_strings', name, status)
+       endif
+    endif
+  end subroutine
+
+
+
   subroutine nfw_rename_var(fname, ncid, oldname, newname)
     character*(*), intent(in) :: fname
     integer, intent(in) :: ncid
@@ -530,6 +564,22 @@ contains
        call quit2(fname, 'nf_get_var_int', name, status)
     end if
   end subroutine nfw_get_var_text
+
+  subroutine nfw_put_var_text(fname, ncid, varid, v)
+    character*(*), intent(in) :: fname
+    integer, intent(in) :: ncid
+    integer, intent(in) :: varid
+    character, intent(in) :: v(*)
+
+    character*(NF_MAX_NAME) :: name
+    integer :: status
+
+    status = nf_put_var_text(ncid, varid, v)
+    if (status /= 0) then
+       call nfw_inq_varname(fname, ncid, varid, name)
+       call quit2(fname, 'nf_put_var_int', name, status)
+    end if
+  end subroutine nfw_put_var_text
 
   subroutine nfw_put_vara_int(fname, ncid, varid, start, length, v)
     character*(*), intent(in) :: fname

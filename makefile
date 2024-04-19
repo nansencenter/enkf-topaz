@@ -21,6 +21,7 @@ m_random.F90\
 m_spherdist.F90\
 distribute.F90\
 m_bilincoeff.F90\
+m_get_mod_fld_nc.F90\
 m_get_mod_fld.F90\
 m_get_mod_grid.F90\
 m_get_mod_nrens.F90\
@@ -45,6 +46,7 @@ ENKF_OBJ = $(ENKF_SRC_C:.c=.o) $(ENKF_SRC_F77:.F=.o) $(ENKF_SRC_F90:.F90=.o)
 
 # some fine tuning; add more dependancies when/if required 
 #
+m_get_mod_fld.o: mod_raw_io.o nfw.o m_get_mod_fld_nc.o 
 m_obs.o: m_uobs.o
 m_Generate_element_Si.o: m_parse_blkdat.o mod_measurement.o m_get_mod_fld.o m_insitu.o m_obs.o
 m_insitu.o: nfw.o mod_measurement.o
