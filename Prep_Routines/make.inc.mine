@@ -25,15 +25,11 @@ CPPFLAGS += $(CPPARCH)
 #F90FLG= -free
 #F77FLG = -nofree
 
-NETCDF_INCLUDE_OPTS=/cluster/software/software/netCDF/4.4.4-intel-2017a-HDF5-1.8.18/include
 
-# Compiler flags - real*8 version 
-#FFLAGS = -g -convert big_endian -assume byterecl -cm -vec_reprot0 -w -xCORE-AVX2 -o3 -r8 -g -traceback -parallel -w -ftz -align all -fno-alias -no-prec-div -qopt-prefetch 
+FFLAGS = -g -convert big_endian -assume byterecl -cm -vec_reprot0 -w  -O2 -r8 -g -traceback 
 
-FFLAGS = -g -convert big_endian -assume byterecl -cm -vec_reprot0 -w -xCORE-AVX2  -O2 -no-prec-div -qopt-prefetch -auto-p32 -no-ansi-alias -qopt-mem-layout-trans=2 -r8 -g -traceback 
-
-#CFLAGS= -O -shared-intel -mcmodel=medium
-CFLAGS= -xCORE-AVX2 -O2 -no-prec-div -qopt-prefetch -auto-p32 -no-ansi-alias -qopt-mem-layout-trans=2 
+CFLAGS= -O -shared-intel -mcmodel=medium
+#CFLAGS= -xCORE-AVX2 -O2 -no-prec-div -qopt-prefetch -auto-p32 -no-ansi-alias -qopt-mem-layout-trans=2 
 
 
 

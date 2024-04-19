@@ -4,7 +4,8 @@ include ./make.inc
 SHELL = /bin/bash
 VPATH = ..:.:TMP
 
-PROGS=prep_obs_hice
+#PROGS=prep_obs_hice
+PROGS=prep_obs
 CHK_OBS=chk_obs
 
 all: $(PROGS) $(CHK_OBS)
@@ -17,6 +18,7 @@ m_get_def_wet_point.F90\
 m_nf90_err.F90\
 m_oldtonew.F90\
 m_pivotp.F90\
+m_rk2.F90\
 m_read_CERSAT_data.F90\
 m_read_OSISAF_data.F90\
 m_read_CLS_SLA.F90\
@@ -75,9 +77,9 @@ chk_obs: $(CHK_OBS_OBJ)
 	@echo "->chk_obs"
 	@cd ./TMP; $(LD) $(LINKFLAGS) -o ../chk_obs $(CHK_OBS_OBJ) $(LIBS)
 
-prep_obs_hice: $(PREP_OBS_OBJ)
-	@echo "->prep_obs_hice"
-	@cd ./TMP; $(LD) $(LINKFLAGS) -o ../prep_obs_hice $(PREP_OBS_OBJ) $(LIBS)
+$(PROGS): $(PREP_OBS_OBJ)
+	@echo "->$(PROGS)"
+	@cd ./TMP; $(LD) $(LINKFLAGS) -o ../$(PROGS) $(PREP_OBS_OBJ) $(LIBS)
 
 $(PREP_OBS_OBJ): makefile make.inc MODEL.CPP
 

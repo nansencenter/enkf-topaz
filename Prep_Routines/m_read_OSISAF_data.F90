@@ -142,6 +142,7 @@ contains
   ! 2012-11-13: Geir Arne Waagbø (met.no)
   ! 2014-9-18:  in order to consistently read the dY from 2010 to 2013
   ! considering before 2011/11/13 no dY_v1p4 
+  ! Adding the uncertainty of DX/DY from provider in June 2023 
   subroutine read_OSISAF_data_lv4(driftfile, gr, data, numdata, var, offset)
     use nfw_mod
     use mod_measurement
@@ -161,6 +162,9 @@ contains
     integer :: lon_id, lat_id, dx_id, dy_id, qflag_id
     real*8, dimension(:,:), allocatable :: drlon, drlat, drdX, drdY
     integer, dimension(:,:), allocatable :: qflag
+
+    integer :: uncertdxy_id
+    real*8, dimension(:,:), allocatable :: undxy 
 
     integer :: ncid
     real*8, dimension(1) :: fillval
@@ -203,6 +207,7 @@ contains
     allocate(drdX(drnx,drny))
     allocate(drdY(drnx,drny))
     allocate(qflag(drnx,drny))
+    allocate(undxy(drnx,drny))
 
     call nfw_inq_varid(driftfile, ncid, 'lon', lon_id)
     call nfw_get_var_double(driftfile, ncid, lon_id, drlon)
@@ -214,6 +219,10 @@ contains
     ! Change dY_v1p4 into dY OSISAF product file
     call nfw_inq_varid(driftfile, ncid, 'dY', dy_id)
     call nfw_get_var_double(driftfile, ncid, dy_id, drdY)
+
+    ! Adding the uncertainty of DX/DY (one standard deviation)
+    call nfw_inq_varid(driftfile, ncid, 'uncert_dX_and_dY', uncertdxy_id)
+    call nfw_get_var_double(driftfile, ncid, uncertdxy_id, undxy)
 
     call nfw_get_att_double(driftfile, ncid, dx_id, '_FillValue', fillval)
 
@@ -227,6 +236,13 @@ contains
        drdY = gr % undef
     end where
 
+    where (abs(undxy - fillval(1)) < 1e-4 * fillval(1))
+       drdY = gr % undef
+       drdX = gr % undef
+    end where
+
+    !print *,'fillval:', fillval(1),gr%undef
+    !print *,        abs((fillval(1)-gr%undef) / gr%undef)
     ! Change status_flag_v1p4 to status_flag from version 1.4 of OSISAF product file
     call nfw_inq_varid(driftfile, ncid, 'status_flag', qflag_id)
     call nfw_get_var_int(driftfile, ncid, qflag_id, qflag)
@@ -244,10 +260,12 @@ contains
                 data(k)%id = 'DX'//offset
                 data(k)%d = drdX(i,j)
                 valid = valid .and.  abs((drdX(i,j)-gr%undef) / gr%undef) > 1e-4
+                valid = valid .and.  abs(drdX(i,j))<gr%undef
              else
                 data(k)%id = 'DY'//offset
-                data(k)%d = -drdY(i,j)
+                data(k)%d = drdY(i,j)
                 valid =  valid .and. abs((drdY(i,j)-gr%undef) / gr%undef) > 1e-4
+                valid = valid .and.  abs(drdY(i,j))<gr%undef
              end if
 
              if (.not. valid .or. mod(i,2)==0 .or. mod(j,2)==0) then
@@ -266,7 +284,8 @@ contains
              ! The a1 value should be in meters, although other values are in km
              data(k)%a1 = 1.4*60000 ! 1.4 represents square root of 2
              data(k)%ns = 1
-             data(k)%var = var ! fom idrft.hdr specification
+             !data(k)%var = var ! fom idrft.hdr specification
+             data(k)%var = max(var,undxy(i,j)**2) ! fom idrft.hdr specification
              data(k)%depth = 0.0
              data(k)%status = valid
           enddo
