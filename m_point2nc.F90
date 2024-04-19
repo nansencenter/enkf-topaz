@@ -269,6 +269,7 @@ contains
     character(8) :: varname
     integer kstart
     integer ncid, dids(2), varid, nf2
+    integer didsn(2),idef
 
 #if defined(QMPI)
     if (.not. master) then
@@ -289,7 +290,8 @@ contains
        call nfw_redef(fname, ncid)
        call nfw_inq_dimid(fname, ncid, 'm', dids(1))
        call nfw_enddef(fname, ncid)
-    
+
+       idef=0
        kstart = -1
        do k = 1, numfields
           if (kstart == -1) then
@@ -318,12 +320,23 @@ contains
                 call nfw_inq_dimid(fname, ncid, 'k', dids(2))
                 call nfw_inq_dimlen(fname, ncid, dids(2), nf2)
                 if (nf /= nf2) then
-                   print *, 'ERROR: p2nc_writeforecast(): varname = "', trim(varname),&
+                   print *, 'Warning: p2nc_writeforecast(): varname = "', trim(varname),&
                         '", # levels = ', nf, '# levels in "', trim(fname), '" =', nf2
-                   print *, 'ERROR: p2nc_writeforecast(): returning'
+                   print *, 'Warning: p2nc_writeforecast(): returning'
+                   
+                   if (.not. nfw_dim_exists(ncid, 'ncat')) then
+                      didsn(1)=dids(1)
+                      call nfw_def_dim(fname, ncid, 'ncat', nf, didsn(2))
+                      call nfw_enddef(fname, ncid)
+                      call nfw_redef(fname, ncid)
+                   end if
+                   call nfw_def_var(fname, ncid, trim(varname), nf_float, 2, didsn, varid)
+                   idef=1
                 end if
              end if
-             call nfw_def_var(fname, ncid, trim(varname), nf_float, 2, dids, varid)
+             if (idef==0) then
+                call nfw_def_var(fname, ncid, trim(varname), nf_float, 2, dids, varid)
+             end if
           end if
 
           call nfw_enddef(fname, ncid)

@@ -55,6 +55,7 @@ contains
     use m_obs
     use m_Generate_element_Si
     use m_get_mod_fld
+    use m_get_mod_fld_nc
     use m_parameters
     implicit none
 
@@ -69,11 +70,13 @@ contains
 
     integer :: i, j, m, iens
     real*4, dimension(nx,ny) :: fldr4
+    real*8, dimension(nx,ny) :: fldr8
     real :: readfld(nx, ny)
     real :: readfld2(nx, ny)
 
     ! hard-coded for now
     integer, parameter :: drnx = 152, drny = 132
+    real,    parameter :: onem = 9.806 
     real*4, dimension(drnx, drny) :: modzon, modmer
     integer, parameter :: drnx_osisaf = 119, drny_osisaf = 177
     real*4, dimension(drnx_osisaf, drny_osisaf) :: dX, dY
@@ -107,6 +110,13 @@ contains
     ! security check
     !
     if (any(obs(:) % id == 'SSH  ') .or. any(obs(:) % id == 'SLA  ')) then
+#if defined (HYCOM_CICE)
+       inquire(exist = ex, file = 'model_TSSH_00.uf')
+       if (.not.ex) then
+          if (master) print *,'model_TSSH_??.uf does not exist'
+          call stop_mpi()
+       end if
+#else
        if (any(obs(:) % id == 'SLA  ')) then
           inquire(exist = ex, file = 'model_SLA.uf')
           if (.not.ex) then
@@ -121,8 +131,8 @@ contains
              call stop_mpi()
           end if
        end if
+#endif
     end if
-
     ! construct S=HA
     !
     do iuobs = 1, nuobs
@@ -135,8 +145,13 @@ contains
           do iens = 1, nrens
              write(cmem,'(i3.3)') iens
              tlevel = 1
+#if defined (HYCOM_CICE)
+             call get_mod_fld_nc(trim('forecast'//cmem//'.nc'), readfld, &
+                  'ficem', 0, tlevel, nx, ny)
+#else
              call get_mod_fld_new(trim('forecast'//cmem), readfld, iens,&
-                  'icec', 0, tlevel, nx, ny)
+                  'icec', 0, tlevel, nx, ny,0)
+#endif
              if (tlevel == -1) then
                 if (master) then
                    print *, 'ERROR: get_mod_fld_new(): failed for "icec"'
@@ -151,23 +166,37 @@ contains
           do iens = 1, nrens
              write(cmem,'(i3.3)') iens
              tlevel = 1
+#if defined (HYCOM_CICE)
+             call get_mod_fld_nc(trim('forecast'//cmem//'.nc'), readfld, &
+                  'hicem', 0, tlevel, nx, ny)
+#else
              call get_mod_fld_new(trim('forecast'//cmem), readfld, iens,&
-                  'hice', 0, tlevel, nx, ny)
+                  'hice', 0, tlevel, nx, ny,0)
+#endif
              if (tlevel == -1) then
                 if (master) then
                    print *, 'ERROR: get_mod_fld_new(): failed for "hice"'
                 end if
                 stop
              end if
+#if defined (HYCOM_CICE)
+             call get_mod_fld_nc(trim('forecast'//cmem//'.nc'), field2, &
+                  'ficem', 0, tlevel, nx, ny)
+#else
              call get_mod_fld_new(trim('forecast'//cmem), field2, iens,&
-                  'icec', 0, tlevel, nx, ny)
+                  'icec', 0, tlevel, nx, ny,0)
+#endif
              if (tlevel == -1) then
                 if (master) then
                    print *, 'ERROR: get_mod_fld_new(): failed for "icec"'
                 end if
                 stop
              end if
-             readfld = readfld * field2 ! pers. comm. Francois Counillon 2013
+             ! skipping the transfer in TP5:  23Jun 2022 
+             !readfld = readfld * field2 ! pers. comm. Francois Counillon 2013
+             ! exp3:
+             readfld = readfld * field2   ! using effective sea ice thickness
+
              call Generate_element_Si(S(:, iens), unique_obs(iuobs),&
                   readfld, depths, nx, ny, nz, 0) 
           end do
@@ -177,9 +206,9 @@ contains
              write(cmem,'(i3.3)') iens
              tlevel = 1
              call get_mod_fld_new(trim('forecast'//cmem), readfld, iens,&
-                  'u', 1, tlevel, nx, ny)
+                  'u', 1, tlevel, nx, ny,0)
              call get_mod_fld_new(trim('forecast'//cmem), readfld2, iens,&
-                  'v', 1, tlevel, nx, ny)
+                  'v', 1, tlevel, nx, ny,0)
              do j = 1, ny
                 do i = i,nx
                   readfld(i,j)=sqrt(readfld(i,j)**2+readfld2(i,j)**2) 
@@ -187,7 +216,7 @@ contains
              end do
              if (tlevel == -1) then
                 if (master) then
-                   print *, 'ERROR: get_mod_fld_new(): failed for "SST"'
+                   print *, 'ERROR: get_mod_fld_new(): failed for "SKIM"'
                 end if
                 stop
              end if
@@ -201,7 +230,7 @@ contains
              write(cmem,'(i3.3)') iens
              tlevel = 1
              call get_mod_fld_new(trim('forecast'//cmem), readfld, iens,&
-                  'temp', 1, tlevel, nx, ny)
+                  'temp', 1, tlevel, nx, ny,0)
              if (tlevel == -1) then
                 if (master) then
                    print *, 'ERROR: get_mod_fld_new(): failed for "SST"'
@@ -212,7 +241,7 @@ contains
              if (prm_prmestexists('sstb')) then
                 tlevel = 1
                 call get_mod_fld_new(trim('forecast'//cmem), field2, iens,&
-                     'sstb', 0, tlevel, nx, ny)
+                     'sstb', 0, tlevel, nx, ny,0)
                 if (tlevel == -1) then
                    if (master) then
                       print *, 'ERROR: get_mod_fld_new(): failed for "sstb"'
@@ -237,16 +266,19 @@ contains
 
           ! FANF loop over each day of the week
           do t = 0, Wd 
-             if (trim(unique_obs(iuobs)) == 'TSLA') then
-                write(day,'(i2.2)') t 
-                fname = trim('model_TSSH_'//day//'.uf')
+             if (count(obs(uobs_begin(iuobs):uobs_end(iuobs)) % date == t)<1) then
+                cycle
              else
-                fname = 'model_SLA.uf'
+                if (master) then
+                   print *, 'TSLA, day', t, ': nobs = ',&
+                   count(obs(uobs_begin(iuobs) : uobs_end(iuobs)) % date == t), & 
+                   nrens
+                end if
              endif
-             if (master) then
-                print *, 'TSLA, day', t, ': nobs = ',&
-                     count(obs(uobs_begin(iuobs) : uobs_end(iuobs)) % date == t)
-             end if
+             write(day,'(i2.2)') t 
+             if (trim(unique_obs(iuobs)) == 'TSLA') then
+                fname = trim('model_TSSH_'//day//'.uf')
+             endif
              do iens = 1, nrens
                 open(37, file = trim(fname), access = 'direct',&
                      status = 'old', recl = reclSLA, action = 'read')
@@ -256,13 +288,13 @@ contains
                    call stop_mpi()
                 end if
                 close(37)
-                readfld = fldr4
+                readfld = real(fldr4)
                 
                 if (prm_prmestexists('msshb')) then
                    write(cmem,'(i3.3)') iens
                    tlevel = 1
                    call get_mod_fld_new(trim('forecast'//cmem), field3, iens,&
-                        'msshb', 0, tlevel, nx, ny)
+                        'msshb', 0, tlevel, nx, ny,0)
                    if (tlevel == -1) then
                       if (master) then
                          print *, 'ERROR: get_mod_fld_new(): failed for "msshb"'
@@ -272,10 +304,15 @@ contains
                    readfld = readfld - field3 ! mean SSH bias for this member
                 end if
 
-                if (trim(unique_obs(iuobs)) == 'TSLA') then
-                   readfld = readfld - field2 ! mean SSH
+                if (trim(unique_obs(iuobs)) == 'TSLA' .or. &
+                       trim(unique_obs(iuobs)) == 'SLA') then
+                   !readfld = (readfld - field2)/onem ! mean SSH
+                   readfld = readfld - field2         ! mean SSH
                 end if
-                
+                if (master) then
+                   print *, 'read SLA for iens=', iens, & 
+                       ' and then to obtain the S(:,iens)'
+                endif
                 call Generate_element_Si(S(:, iens), unique_obs(iuobs),&
                      readfld, depths, nx, ny, nz, t)
              end do

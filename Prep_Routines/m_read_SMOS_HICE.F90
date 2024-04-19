@@ -132,6 +132,11 @@ contains
     integer :: i, j, nobs
     integer :: i1,j1
 
+#if defined (CYSMOSV2)
+    integer, allocatable :: tmp_int(:,:)
+    real*8, dimension(1) :: scalefac
+    integer,dimension(1) :: fillval
+#endif
     print *, 'reading "', trim(fname), '"...'
 
     inquire(file = trim(fname), exist = ex)
@@ -153,18 +158,53 @@ contains
     allocate(hice(nx, ny))
     allocate(hvar(nx, ny))
     allocate(fice(nx, ny),mask(nx,ny))
-    call nfw_inq_varid(fname, ncid, 'longitude', lon_id)
-    call nfw_inq_varid(fname, ncid, 'latitude', lat_id)
-    call nfw_inq_varid(fname, ncid, 'analysis_thickness', hice_id)
-    call nfw_inq_varid(fname, ncid, 'analysis_thickness_unc', hvar_id)
-    call nfw_inq_varid(fname, ncid, 'ice_concentration', fice_id)
+
+#if defined (CYSMOSV2)
+    allocate(tmp_int(nx,ny))
+#endif
+    !call nfw_inq_varid(fname, ncid, 'longitude', lon_id)
+    !call nfw_inq_varid(fname, ncid, 'latitude', lat_id)
+    call nfw_inq_varid(fname, ncid, 'lon', lon_id)
+    call nfw_inq_varid(fname, ncid, 'lat', lat_id)
+    call nfw_inq_varid(fname, ncid, 'analysis_sea_ice_thickness', hice_id)
+    call nfw_inq_varid(fname, ncid, 'analysis_sea_ice_thickness_unc', hvar_id)
     print *, lon_id,lat_id,hice_id,hvar_id,fice_id
+#if defined (CYSMOSV2)
+    call nfw_inq_varid(fname, ncid, 'sea_ice_concentration', fice_id)
+
+    call nfw_get_var_double(fname, ncid, lon_id, lon)
+    call nfw_get_var_double(fname, ncid, lat_id, lat)
+
+    call nfw_get_var_int(fname, ncid, hice_id, tmp_int)
+    call nfw_get_att_double(fname, ncid, hice_id, 'scale_factor', scalefac)
+    call nfw_get_att_int(fname, ncid, hice_id, '_FillValue', fillval)
+    hice=real(tmp_int)*scalefac(1)
+    where(tmp_int==fillval(1))  hice=0
+ 
+
+    call nfw_get_var_int(fname, ncid, hvar_id, tmp_int)
+    call nfw_get_att_double(fname, ncid, hvar_id,  'scale_factor', scalefac)
+    call nfw_get_att_int(fname, ncid, hvar_id, '_FillValue', fillval)
+    hvar=real(tmp_int)*scalefac(1)
+    where(tmp_int==fillval(1))  hvar=0
+
+    call nfw_get_var_int(fname, ncid, fice_id, tmp_int)
+    call nfw_get_att_double(fname, ncid, fice_id,  'scale_factor', scalefac)
+    call nfw_get_att_int(fname, ncid, fice_id, '_FillValue', fillval)
+    fice=real(tmp_int)*scalefac(1)
+    where(tmp_int==fillval(1))  fice=0
+
+    deallocate(tmp_int)
+#else
+    call nfw_inq_varid(fname, ncid, 'ice_concentration', fice_id)
 
     call nfw_get_var_double(fname, ncid, lon_id, lon)
     call nfw_get_var_double(fname, ncid, lat_id, lat)
     call nfw_get_var_real(fname, ncid, hice_id, hice)
     call nfw_get_var_real(fname, ncid, hvar_id, hvar)
     call nfw_get_var_real(fname, ncid, fice_id, fice)
+
+#endif
     call nfw_close(fname, ncid)
 
     print *, 'filling the measurements array...'
@@ -193,9 +233,17 @@ contains
         data(nobs) % id = 'HICE'
         data(nobs) % d = real(hice(i, j)) 
 #if defined (CYSMOS_Error)
+!ifdef CYSMOS_Error
         !data(nobs) % var =  (hvar(i,j)+min(0.5,0.1+0.15*hice(i,j))) ** 2 !  Offset 0.1-0.5 
         ! tuning at 20th April 2017
-        data(nobs) % var =  (hvar(i,j)+min(0.25,0.1+0.075*hice(i,j))) ** 2 ! Offset 0.1-0.25 
+!        data(nobs) % var =  (hvar(i,j)+min(0.25,0.1+0.075*hice(i,j))) ** 2 ! Offset 0.1-0.25 
+!elseif CYSMOS_Error2
+        ! tuning at 20th May 2019 relative to the new version of CS2SMOS
+        if (hice(i,j)<3) then
+          data(nobs) % var =  (hvar(i,j)+max(0.02,0.1*exp(-hice(i,j)*1.5))) ** 2 ! Offset 0.1-0.02 
+        else
+          data(nobs) % var =  (hvar(i,j)+min(0.2,0.02*exp(1.8*(hice(i,j)-3)))) ** 2 ! Offset 0.02-0.2 
+        endif
 #else
         data(nobs) % var =  (hvar(i,j) * 1.0) ** 2 ! Exaggerate, factor 2 
 #endif

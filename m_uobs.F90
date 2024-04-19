@@ -2,7 +2,10 @@
 !
 ! Created:       11 August 2010
 !
-! Last modified: 11.8.2010
+! corrected at May 2019 by JX
+!       increasing or tuning the radius for different observation types
+!
+! created: 11.8.2010
 !
 ! Author:        Pavel Sakov
 !                NERSC
@@ -52,14 +55,13 @@ contains
     end if
     nuobs = 0
     unique_obs = ''
+    Trobs=1.0
     do o = 1, nrobs
        obsmatch = .false.
 #if defined(PROF_RADIUS)
        if (trim(tags(o)) == 'SAL' .or. trim(tags(o)) == 'TEM' .or.&
           trim(tags(o)) == 'GSAL' .or. trim(tags(o)) == 'GTEM') then
           Trobs(o)=2.0
-       else
-          Trobs(o)=1
        endif 
 #endif
        do uo = 1, nuobs

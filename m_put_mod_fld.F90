@@ -26,13 +26,24 @@ subroutine put_mod_fld(memfile,fld,iens,cfld,vlevel,tlevel,indx,nx,ny)
    integer , parameter :: nop=123
    integer :: ios
 
+   spval=2**100
+
    writefldr4 = real(fld, 4)
+   ! for debug
+   !print *, 'Dump: '//trim(memfile)//' '//trim(cfld), vlevel, tlevel,indx
 
    ! Write fld into index of .a file -- Direct access file
+   !call writeraw(writefldr4,          &! feltet som skal skrivast
+   !              amin,amax,           &! min og max (returnerast fra writeraw)
+   !              nx,ny,               &! dimensjon
+   !              .false.,spval,       &! feltet vil ikkje faa "no-value" verdiar
+   !              memfile//'.a',       &! forelopig filnavn...
+   !              indx)                 ! indexen i .a fila
+
    call writeraw(writefldr4,          &! feltet som skal skrivast
                  amin,amax,           &! min og max (returnerast fra writeraw)
                  nx,ny,               &! dimensjon
-                 .false.,spval,       &! feltet vil ikkje faa "no-value" verdiar
+                 .true.,spval,       &! feltet vil ikkje faa "no-value" verdiar
                  memfile//'.a',       &! forelopig filnavn...
                  indx)                 ! indexen i .a fila
 

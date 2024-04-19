@@ -429,7 +429,7 @@ contains
        end if
     end do
     do k = 1, nk
-       call get_mod_fld_new(trim(fname), dz2d, 1, 'dp      ', k, tlevel, ni, nj)
+       call get_mod_fld_new(trim(fname), dz2d, 1, 'dp      ', k, tlevel, ni, nj,0)
        do p = 1, nprof
           dz_cell(:, :) = dz2d(ipiv(p) : ipiv(p) + 1, jpiv(p) : jpiv(p) + 1)
           dz = dz_cell(1, 1) * a1(p) + dz_cell(2, 1) * a2(p)&
@@ -674,6 +674,8 @@ contains
        v(1 : npoints, p) = obs(pstart(p) : pend(p)) % d
     end do
     call nfw_put_var_double(fname, ncid, v_id, v)
+    !call nfw_put_att_double(fname, ncid, v_id, '_FillValue',nf_double,1,-999.0)
+    !nfw_put_att_double(fname, ncid, varid, attname, type, length, v)
     
     ! data error variance
     !

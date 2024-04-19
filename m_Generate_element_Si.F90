@@ -73,6 +73,10 @@ contains
                         + fld(ip1, j) * obs(iobs) % a2 &
                         + fld(ip1, jp1) * obs(iobs) % a3 &
                         + fld(i, jp1) * obs(iobs) % a4
+                   if (abs(S(iobs))>1000.and.master) then
+                   print '(a10,3i6,5f14.2)', 'iobs=',iobs,i,j, &
+                      fld(i,j),fld(ip1,j),fld(ip1,jp1),fld(i,jp1),obs(iobs)%d
+                   endif
                 else ! data support assumed a square of 2ns * 2ns grid cells
                    imin = max( 1, i - ns)
                    imax = min(nx, i + ns)
@@ -251,14 +255,14 @@ contains
        z = 0.0d0
 
        tlevel = 1
-       call get_mod_fld_new(trim(fname), sstbias, iens, 'sstb ', 0, tlevel, ni, nj)
+       call get_mod_fld_new(trim(fname), sstbias, iens, 'sstb ', 0, tlevel, ni, nj,1)
        if (tlevel == -1) then
           if (master) then
              print *, 'ERROR: get_mod_fld_new(): failed for "sstb"'
           end if
           stop
        end if
-       call get_mod_fld_new(trim(fname), mld, iens, 'dpmixl  ', 0, tlevel, ni, nj)
+       call get_mod_fld_new(trim(fname), mld, iens, 'dpmixl  ', 0, tlevel, ni, nj,1)
        if (tlevel == -1) then
           if (master) then
              print *, 'ERROR: get_mod_fld_new(): failed for "dpmixl"'
@@ -281,14 +285,14 @@ contains
 
           ! read the depth and the requested field at this layer
           !
-          call get_mod_fld_new(trim(fname), dz2d, iens, 'dp      ', k, tlevel, ni, nj)
+          call get_mod_fld_new(trim(fname), dz2d, iens, 'dp      ', k, tlevel, ni, nj,1)
           if (tlevel == -1) then
              if (master) then
                 print *, 'ERROR: get_mod_fld_new(): failed for "dp"'
              end if
              stop
           end if
-          call get_mod_fld_new(trim(fname), v2d, iens, fieldtag, k, tlevel, ni, nj)
+          call get_mod_fld_new(trim(fname), v2d, iens, fieldtag, k, tlevel, ni, nj,1)
           if (tlevel == -1) then
              if (master) then
                 print *, 'ERROR: get_mod_fld_new(): failed for "', fieldtag, '"'

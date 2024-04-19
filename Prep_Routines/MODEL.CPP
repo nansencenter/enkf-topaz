@@ -1,4 +1,10 @@
 #undef QMPI
 #define LITTLE_ENDIAN
 #undef Rio2013 
-#define BLACK_PROFILE
+#undef BLACK_PROFILE
+#define CYSMOS_Error
+#define CYSMOSV2
+#undef NRT_SST 
+#define CCI_SST 
+#undef C3S_SST 
+#define Rio22 

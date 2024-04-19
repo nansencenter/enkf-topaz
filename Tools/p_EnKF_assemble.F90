@@ -47,11 +47,20 @@ program EnKF_postprocess
 
    real, allocatable, dimension(:,:)   :: dpsum
 
-   integer,parameter :: numfields=2
-   integer :: ios,ios2, reclICE,ifld
+#if defined(HYCOM_CICE)    
+   ! should be consistent with the content in analysisfields_ice.in
+   integer,parameter :: ncat=5
+   integer,parameter :: numfields=6
    character(len=8) :: fieldnames(numfields)
    integer :: fieldlevels(numfields)
+   integer :: jafile,ilevel,ilev0,ilev1
+#else
+   integer,parameter :: numfields=2
+   character(len=8) :: fieldnames(numfields)
+   integer :: fieldlevels(numfields)
+#endif
 
+   integer :: ios,ios2, reclICE,ifld
 
    if (iargc()==4) then
       call getarg(1,template)
@@ -89,6 +98,7 @@ program EnKF_postprocess
    ! Remove postfix of template file
    fnd=max(index(template,'.a'),index(template,'.b'))
 
+   spval=2**100
 
    ! Inquire for existence
    inquire(exist=ex,file=template(1:fnd-1)//'.b')
@@ -116,7 +126,7 @@ program EnKF_postprocess
 
          ! Get actual field  - for now we use the READRAW routine (later on we
          ! should switch to m_get_mod_fld
-         call READRAW(fldr4,amin,amax,idm,jdm,.false.,spval,template(1:fnd-1)//'.a',rstind)
+         call READRAW(fldr4,amin,amax,idm,jdm,.true.,spval,template(1:fnd-1)//'.a',rstind)
          fld=fldr4
 
 
@@ -137,7 +147,6 @@ program EnKF_postprocess
             ! Temporary name, will change
             afile='analysis'//cmem//'_proc'//cproc
 
-
             ! NB - time level=1
             ! NB2 - the files dumped in the analysis lack a header (last argument
             ! is false)
@@ -157,7 +166,7 @@ program EnKF_postprocess
                nomatch=.false.
 
                ! Read field from analysed file 
-               call READRAW(fldr4,amin,amax,idm,jdm,.false.,spval,trim(afile)//'.a',tmpindx)
+               call READRAW(fldr4,amin,amax,idm,jdm,.true.,spval,trim(afile)//'.a',tmpindx)
                fld=fldr4
 
               ! Sjekk p at vi har lest rett - samanlign max/min fr filene
@@ -170,11 +179,8 @@ program EnKF_postprocess
                  call exit(1)
               end if
 
-
-
                ! put into final, processed file -- imem is not used, actually
                call put_mod_fld('analysis'//cmem,fld,imem,cfld,vlevel,tlevel,rstind,idm,jdm)
-               
 
                exit
             end if
@@ -191,6 +197,72 @@ program EnKF_postprocess
          rstind=rstind+1
       end if ! read of template was ok
    end do
+#if defined(HYCOM_CICE)
+   print *,'Add the ice fields!'
+   fieldnames(1)='ficem'
+   fieldnames(2)='hicem'
+   fieldnames(3)='hsnwm'
+   fieldnames(4)='aicen'
+   fieldnames(5)='vicen'
+   fieldnames(6)='vsnon'
+   fieldlevels(1)=0
+   fieldlevels(2)=0
+   fieldlevels(3)=0
+   fieldlevels(4)=ncat
+   fieldlevels(5)=ncat
+   fieldlevels(6)=ncat
+   do ifld=1,numfields
+      cfld=fieldnames(ifld)
+      nomatch=.true.
+      if (ifld>2) then
+         ilev0=0
+      else
+         ilev0=0
+      endif
+      do vlevel=ilev0,fieldlevels(ifld)   
+         do jafile=iafile,nproc ! List of procs used in analysis
+            write(cproc,'(i3.3)') jafile-1
+            ! Temporary name, will change
+            afile='analysis'//cmem//'_proc'//cproc
+
+            ! NB - time level=1
+            ! NB2 - the files dumped in the analysis lack a header (last argument
+            ! is false)
+            call rst_index_from_header(trim(afile)//'.b',cfld,vlevel,1, &
+                                             tmpindx,bmin,bmax,.false.) 
+
+
+            if (tmpindx/=-1) then
+               print '(a8," -- layer:",i4,"  match : record, file",i4," ",a)', cfld, vlevel,tmpindx,trim(afile)
+               nomatch=.false.
+               ! Read field from analysed file 
+               call READRAW(fldr4,amin,amax,idm,jdm,.true.,spval,trim(afile)//'.a',tmpindx)
+               fld=fldr4
+
+               ! Sjekk p at vi har lest rett - samanlign max/min fr filene
+               if     (abs(amin-bmin).gt.abs(bmin)*1.e-4 .or. &
+                      abs(bmax-amax).gt.abs(bmax)*1.e-4     ) then
+                  print *,'Inconsistency between .a and .b files'
+                  print *,'.a : ',amin,amax
+                  print *,'.b : ',bmin,bmax
+                  print *,cfld,vlevel,tlevel
+                  call exit(1)
+               end if
+           
+               ! put into final, processed file -- imem is not used, actually
+               call put_mod_fld('analysis'//cmem,fld,imem,cfld,vlevel,1,rstind,idm,jdm)
+
+               rstind = rstind + 1
+
+               exit
+            end if
+
+         end do
+      end do
+
+   end do   ! ice field cycle
+
+#endif
 
 #if ! defined (SINGLE_RESTART)
 
@@ -237,7 +309,7 @@ program EnKF_postprocess
                !print *,'Got match for '//cfld
 
                ! Read field from analysed file 
-               call READRAW(fldr4,amin,amax,idm,jdm,.false.,spval,trim(afile)//'.a',tmpindx)
+               call READRAW(fldr4,amin,amax,idm,jdm,.true.,spval,trim(afile)//'.a',tmpindx)
                fld=fldr4
 
               ! Sjekk p at vi har lest rett - samanlign max/min fr filene

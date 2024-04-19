@@ -10,6 +10,7 @@ program checkice_en
   use mod_raw_io
   use m_parse_blkdat
   use m_get_mod_grid
+  use m_get_mod_fld_nc
   use m_get_mod_fld
   implicit none
   integer*4, external :: iargc
@@ -86,8 +87,8 @@ program checkice_en
       write(*,*) 'Can not find '//trim(filename)//'.b'
       stop '(EnKF_postprocess)'
     end if
-    call get_mod_fld_new(trim(filename),fld(:,:),1,'ficem   ',0,1,idm,jdm); ficem=fld;
-    call get_mod_fld_new(trim(filename),fld(:,:),1,'hicem   ',0,1,idm,jdm); hicem=fld;
+    call get_mod_fld_new(trim(filename),fld(:,:),1,'ficem   ',0,1,idm,jdm,0); ficem=fld;
+    call get_mod_fld_new(trim(filename),fld(:,:),1,'hicem   ',0,1,idm,jdm,0); hicem=fld;
     icevolume(iens) = sum(ficem * hicem, mask = iswater)
     icearea(iens) = sum(ficem, mask = iswater)
   end do
@@ -102,9 +103,9 @@ program checkice_en
   do iens=1,nens
     write(ctmp,'(i3.3)') iens  
     filename=trim(icerestart)//trim(ctmp)
-    call get_mod_fld_new(trim(filename),fld(:,:),1,'hicem   ',0,1,idm,jdm); hicem=fld;
-    call get_mod_fld_new(trim(filename),fld(:,:),1,'ticem   ',0,1,idm,jdm); ticem=fld;
-    call get_mod_fld_new(trim(filename),fld(:,:),1,'tsrfm   ',0,1,idm,jdm); tsrfm=fld;
+    call get_mod_fld_new(trim(filename),fld(:,:),1,'hicem   ',0,1,idm,jdm,0); hicem=fld;
+    call get_mod_fld_new(trim(filename),fld(:,:),1,'ticem   ',0,1,idm,jdm,0); ticem=fld;
+    call get_mod_fld_new(trim(filename),fld(:,:),1,'tsrfm   ',0,1,idm,jdm,0); tsrfm=fld;
      maxvalue_hicem = maxval(hicem, mask = iswater) ! In meters
      maxvalue_ticem = maxval(ticem, mask = iswater) ! In Kelvin 
      maxvalue_tsrfm = maxval(tsrfm, mask = iswater) ! In Kelvin 

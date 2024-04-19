@@ -49,6 +49,9 @@
 !          nfw_put_att_real(fname, ncid, varid, attname, type, length, v)
 !          nfw_put_att_double(fname, ncid, varid, attname, type, length, v)
 !
+!          nfw_get_var_strings(fname,ncid,varid,varstring,Sn1,Sn2)
+!          nfw_put_var_strings(fname,ncid,varid,varstring,Sn1,Sn2)
+!
 !          Derived procedures:
 !
 !          nfw_get_var_double_firstrecord(fname, ncid, varid, v)
@@ -59,8 +62,9 @@
 ! 29/04/2008 PS: added nfw_rename_var(fname, ncid, oldname, newname)
 ! 21/10/2009 PS: added nfw_var_exists(ncid, name)
 ! 22/10/2009 PS: added nfw_put_att_double(fname, ncid, varid, attname, type, 
-!                                         length, v)
+!
 ! 06/11/2009 PS: added nfw_dim_exists(ncid, name)
+! 20/09/2019 PS: added nfw_var_att_exists(ncid, varid, attname, type,length)
 !                nfw_put_att_real(fname, ncid, varid, attname, type, length, v)
 !                nfw_get_att_real(fname, ncid, varid, attname, v)
 
@@ -370,6 +374,37 @@ contains
     endif
   end subroutine
 
+  subroutine nfw_put_var_strings(fname,ncid,varid,varstring,Sn1,Sn2)
+    character*(*),  intent(in) :: fname
+    integer,   intent(in)      :: ncid
+    integer,   intent(in)      :: varid
+    integer,   intent(in)      :: Sn1,Sn2
+    character, intent(in)     :: varstring (Sn1,Sn2)
+ 
+    integer ::  ndims,dimid,len_var    
+    integer :: dimids(NF_MAX_VAR_DIMS)
+    integer :: status
+    character*(NF_MAX_NAME) :: name
+
+    call nfw_inq_varndims(fname, ncid, varid, ndims)
+
+    if(ndims==1)then
+       status = nf_put_var_text(ncid,varid,varstring)
+       if (status /= 0) then
+         call nfw_inq_varname(fname, ncid, varid, name)
+         call quit2(fname, 'nf_get_var_strings', name, status)
+       endif
+    elseif(ndims==2) then
+       status=nf_put_var_text(ncid,varid,varstring)
+       if (status /= 0) then
+         call nfw_inq_varname(fname, ncid, varid, name)
+         call quit2(fname, 'nf_put_var_strings', name, status)
+       endif
+    endif
+  end subroutine
+
+
+
   subroutine nfw_rename_var(fname, ncid, oldname, newname)
     character*(*), intent(in) :: fname
     integer, intent(in) :: ncid
@@ -529,6 +564,22 @@ contains
        call quit2(fname, 'nf_get_var_int', name, status)
     end if
   end subroutine nfw_get_var_text
+
+  subroutine nfw_put_var_text(fname, ncid, varid, v)
+    character*(*), intent(in) :: fname
+    integer, intent(in) :: ncid
+    integer, intent(in) :: varid
+    character, intent(in) :: v(*)
+
+    character*(NF_MAX_NAME) :: name
+    integer :: status
+
+    status = nf_put_var_text(ncid, varid, v)
+    if (status /= 0) then
+       call nfw_inq_varname(fname, ncid, varid, name)
+       call quit2(fname, 'nf_put_var_int', name, status)
+    end if
+  end subroutine nfw_put_var_text
 
   subroutine nfw_put_vara_int(fname, ncid, varid, start, length, v)
     character*(*), intent(in) :: fname
@@ -805,6 +856,19 @@ contains
     status = nf_inq_varid(ncid, trim(name), varid)
     nfw_var_exists = (status == 0)
   end function nfw_var_exists
+
+
+  logical function nfw_var_att_exists(ncid,varid, name)
+    integer, intent(in) :: ncid,varid
+    character*(*), intent(in) :: name
+
+    integer :: status
+    integer :: cxtype,cnlen
+
+    status = nf_inq_att(ncid, varid, trim(name),cxtype,cnlen)
+    nfw_var_att_exists = (status == 0)
+  end function nfw_var_att_exists
+
 
   logical function nfw_dim_exists(ncid, name)
     integer, intent(in) :: ncid

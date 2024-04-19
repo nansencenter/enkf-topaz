@@ -36,7 +36,7 @@ program consistency
   integer :: lon_id, lat_id, tot_id,tem_id, dp_id
 
   real    :: bmin, bmax
-  real*4  :: amin, amax, spval=0.0
+  real*4  :: amin, amax, spval
   integer :: vlevel,tlevel,rstind
   logical :: readok, ex
   integer :: testindex
@@ -56,6 +56,7 @@ program consistency
 
    real :: mindx,meandx
 
+  spval=2**100
    process_ice=.false.
    imem=1 ! Only really needed when reading ice restart file
    if (iargc()==1) then
@@ -128,7 +129,7 @@ program consistency
 
          if (testindex/=-1) then
             print *,'Checking : ',cfld,vlevel,tlevel
-            call READRAW(fldr4,amin,amax,idm,jdm,.false.,spval,&
+            call READRAW(fldr4,amin,amax,idm,jdm,.true.,spval,&
                  trim(rstbase)//'.a',rstind)
             readfld=fldr4
 
@@ -181,7 +182,7 @@ program consistency
       dpsum=0.
       do k=1,kdm
          call get_mod_fld_new(trim(rstbase),readfld,imem,'dp      ',k,itime,&
-              idm,jdm)
+              idm,jdm,0)
          dpsum=dpsum+readfld
       end do
       print '(a,i3)','Max difference dpsum / depths at time index ',itime

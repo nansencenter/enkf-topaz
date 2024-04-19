@@ -177,18 +177,18 @@ program fixhycom_eco
    dpsum=0.
    do k=1,kdm
       !call get_mod_fld(dp(:,:,k),1,'dp      ',k,1)
-      call get_mod_fld_new(restart(1:fnd-1),dp(:,:,k),imem,'dp      ',k,1,idm,jdm)
+      call get_mod_fld_new(restart(1:fnd-1),dp(:,:,k),imem,'dp      ',k,1,idm,jdm,0)
       dpsum=dpsum+dp(:,:,k)
 #if defined (ECO)
       !reading of forecast fields: tracers, T and S
-      call get_mod_fld_new(trim(restfor),dpfor(:,:,k),imem,'dp    ',k,1,idm,jdm)
+      call get_mod_fld_new(trim(restfor),dpfor(:,:,k),imem,'dp      ',k,1,idm,jdm,0)
       do ktrcr=1,ntracr
          write(ctrcr,'(i2.2)') ktrcr
          cfld='tracer'//ctrcr
-         call get_mod_fld_new(trim(restfor),tracerf(:,:,k,ktrcr),imem,cfld,k,1,idm,jdm)
+         call get_mod_fld_new(trim(restfor),tracerf(:,:,k,ktrcr),imem,cfld,k,1,idm,jdm,0)
       enddo
-      call get_mod_fld_new(trim(restfor),temp(:,:,k),imem,'temp    ',k,1,idm,jdm)
-      call get_mod_fld_new(trim(restfor),sal(:,:,k),imem,'saln    ',k,1,idm,jdm)
+      call get_mod_fld_new(trim(restfor),temp(:,:,k),imem,'temp    ',k,1,idm,jdm,0)
+      call get_mod_fld_new(trim(restfor),sal(:,:,k),imem,'saln     ',k,1,idm,jdm,0)
 #endif      
    end do
    print *,maxval(dpsum-depths*onem)
@@ -312,12 +312,12 @@ program fixhycom_eco
 !            call exit(1)
 !         end if
 
-	 call get_mod_fld_new(restart(1:fnd-1),fld(:,:),imem,cfld,vlevel,1,idm,jdm)
+	 call get_mod_fld_new(restart(1:fnd-1),fld(:,:),imem,cfld,vlevel,1,idm,jdm,0)
 
          if (trim(cfld)=='temp') then
 
             ! need salinity as well
-            call get_mod_fld_new(restart(1:fnd-1),saln(:,:),imem,'saln    ',vlevel,1,idm,jdm)
+            call get_mod_fld_new(restart(1:fnd-1),saln(:,:),imem,'saln    ',vlevel,1,idm,jdm,0)
 
             !if (tlevel==-1) then
             !   print *,'Could not get salinity field'

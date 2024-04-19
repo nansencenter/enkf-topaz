@@ -27,7 +27,7 @@ module m_superobs
   implicit none
 
   integer, parameter, private :: STRLEN = 512
-  logical, parameter, private :: TEST = .false.
+  logical, parameter, private :: TEST = .true.
 
   contains
 
@@ -71,6 +71,10 @@ module m_superobs
     do o = 1, nobs
        if (trim(obs(o) % id) == trim(obstag)) then
           mask(o) = .true.
+       elseif (index(trim(obstag),'idrf')>0) then
+          if (index(trim(obs(o)%id),'DX')>0.or.index(trim(obs(o)%id),'DY')>0) then 
+             mask(o) = .true.
+          end if
        end if
        obs(o) % orig_id = o
     end do
@@ -125,8 +129,15 @@ module m_superobs
           if (thisob % ipiv /= iprev .or. thisob % jpiv /= jprev .or. kpiv(sorted(o)) /= kprev) then
              if (ii_now > 0) then ! write the previous measurement
                 newobs(ii) % d = valsum / n
-                newobs(ii) % var = 1.0d0 / varinvsum
-                newobs(ii) % id = obstag
+                ! replacing the subper-obs error by the initial defined error
+                ! variance by Jiping
+                if (index(trim(obstag),'DX')>0.or.index(trim(obstag),'DY')>0) then 
+                   newobs(ii) % var = varinvsum
+                   newobs(ii) % id = thisob%id
+                else
+                   newobs(ii) % var = 1.0d0 / varinvsum
+                   newobs(ii) % id = obstag
+                endif
                 if (nlon_pos == 0 .or. nlon_neg == 0 .or. lonsum_abs / n < 90.0d0) then
                    newobs(ii) % lon = lonsum / n
                 else
@@ -155,6 +166,7 @@ module m_superobs
                 if (TEST) then
                    write(101, '(a, g10.3)') 'total # of obs = ', n
                    write(101, '(a, i6)') '  index = ', ii
+                   write(101, '(a, g10.3)') '  id = ', newobs(ii) % id
                    write(101, '(a, g10.3)') '  d = ', newobs(ii) % d
                    write(101, '(a, g10.3)') '  var = ', newobs(ii) % var
                    write(101, '(a, g10.3)') '  lon = ', newobs(ii) % lon
@@ -201,7 +213,11 @@ module m_superobs
           n = n + 1.0
           valsum = valsum + thisob % d
           valsqsum = valsqsum + (thisob % d) ** 2
-          varinvsum = varinvsum + 1.0 / thisob % var
+          if (index(trim(obstag),'DX')>0.or.index(trim(obstag),'DY')>0) then 
+             varinvsum = thisob % var
+          else
+             varinvsum = varinvsum + 1.0 / thisob % var
+          endif
           lonsum = lonsum + thisob % lon
           lonsum_abs = lonsum_abs + abs(thisob % lon)
           if (thisob % lon >= 0.0) then

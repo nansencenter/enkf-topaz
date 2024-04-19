@@ -8,6 +8,7 @@
       IMPLICIT NONE
 C
       REAL*4     SPVALH
+      !PARAMETER (SPVALH=2**100)
       PARAMETER (SPVALH=1.0E30_4)
 C
       REAL*4,        INTENT(OUT) :: A(IDM,JDM)
@@ -77,6 +78,7 @@ C
       IMPLICIT NONE
 C
       REAL*4     SPVALH
+      !PARAMETER (SPVALH=2**100)
       PARAMETER (SPVALH=1.0e30_4)
 C
       REAL*4,        INTENT(INOUT) :: A(IDM,JDM)
@@ -203,6 +205,7 @@ C
   117 format (a8,23x,i3,i3,2x,2e16.7)
 
       end subroutine
+
       
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Routine to get field desc in  header file (.b) from index in data file (.a)
@@ -321,17 +324,19 @@ C
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Routine to get index of fields in regional grid file (.a) from header file (.b)
       subroutine daily_index_from_header(fname,cfld,coord,indx,
-     &   bmin,bmax)
+     &   bmin,bmax,iflag)
       implicit none
       character(len=*), intent(in) :: fname     ! filename without extention
       character(len=*), intent(in) :: cfld      ! variable name
       integer         , intent(in) :: coord     ! vertical coordinate
       integer         , intent(out):: indx      ! index in .a file
       real            , intent(out):: bmin,bmax ! min and max from b file
+      integer,          intent(in) :: iflag     ! used for debuging
 
-      logical, parameter:: skiphdr=.true.
+      logical, parameter:: skiphdr=.false.
       character(len=5) :: char5
       character(len=8) :: char8
+      character(len=80) :: tmpstr 
       integer :: ios
       integer :: nop
       logical :: match, ex
@@ -346,8 +351,8 @@ C
          print *,'file '//trim(fname)//' is not present'
          call exit(1)
       end if
-      open(nop,file=trim(fname),status='old')
 
+      open(nop,file=trim(fname),status='old')
       ! Skip first nskip lines
       if (skiphdr) then
          do while (char5/='field' .and. ios==0)
@@ -362,9 +367,11 @@ C
       lcoord=-1
       match=.false.
       do while(.not.match .and. ios==0)
-         read(nop,117,iostat=ios) char8,nstep,rday,lcoord,dens,
-     &                            bmin,bmax
+         read(nop,118,iostat=ios) char8,tmpstr,lcoord,tmpstr,bmin,bmax
          match=(trim(cfld)==trim(char8) .and. lcoord==coord)
+         if (match) then
+            write(6,119) char8,tmpstr,lcoord,tmpstr,bmin,bmax,iflag
+         endif
          indx=indx+1
       end do
       close(nop)
@@ -373,6 +380,8 @@ C
          indx=-1
       endif
 
+  119 format (a8,' = ',a21,i3,a7,1p2e16.7,i5)
+  118 format (a8,' = ',a21,i3,a7,1p2e16.7)
   117 format (a8,' = ',i11,f11.2,i3,f7.3,1p2e16.7)
       end subroutine daily_index_from_header
 

@@ -28,15 +28,22 @@
 !                   one (with most data or the most recent) is retained
 !
 ! Modifications: 17/08/2010 PS: skip discarding close profiles
+! 1) skipping *_qc=2 in the profile March 2024
 !
 
 module m_read_ifremer_argo
   implicit none
 
   integer, parameter, private :: STRLEN =2180
-  integer, parameter, private :: MLEV0 = 1700 
-  real, parameter, private :: SAL_MIN = 32.0
+  integer, parameter, private :: MLEV0 = 1000   ! changed back for NRT profile at Oct2019
+  !integer, parameter, private :: MLEV0 = 2000   ! changed for NRT profile Jan2024 
+  !integer, parameter, private :: MLEV0 = 4000
+  !real, parameter, private :: SAL_MIN = 16.0
+  !real, parameter, private :: SAL_MIN = 20.0     ! tuning in March 2020
+  real, parameter, private :: SAL_MIN = 16.0     ! tuning back Jan 2024
   real, parameter, private :: SAL_MAX = 37.5
+  real, parameter, private :: TEM_MIN = -2.0
+  real, parameter, private :: TEM_MAX = 40.0
   real, parameter, private :: DENS_DIFF_MIN = -0.02
   logical, parameter, private :: DISCARD_CLOSE = .false.
 
@@ -205,7 +212,8 @@ contains
     mask_2(:) = 0; !1: Sal and density check 
     mask_3(:) = 0; !1: pre/sal/tem QC 
 #endif
-    where (juld_qc /= '1' .and. juld_qc /= '2') mask = 0
+    where (juld_qc /= '1') mask = 0
+    !where (juld_qc /= '1' .and. juld_qc /= '2') mask = 0
     do p = 1, nprof
        if (mask(p) == 0) then
           mask2(:, p) = 0
@@ -215,7 +223,8 @@ contains
     print *, '    ', count(mask == 1), ' good profiles'
     print *, '    ', count(mask2 == 1), ' good obs'
 
-    where (pos_qc /= '1' .and. pos_qc /= '2') mask = 0
+    where (pos_qc /= '1' ) mask = 0
+    !where (pos_qc /= '1' .and. pos_qc /= '2') mask = 0
     do p = 1, nprof
        if (mask(p) == 0) then
           mask2(:, p) = 0
@@ -262,7 +271,12 @@ contains
     !
     do p = 1, nprof
        do l = 1, nlev
-          if (pres_qc(l, p) /= '1' .and. pres_qc(l, p) /= '2') then
+          !if (pres_qc(l, p) /= '1' .and. pres_qc(l, p) /= '2' ) then
+          if (pres_qc(l, p) /= '1' ) then
+             mask2(l, p) = 0
+             continue
+          end if
+          if (pres(l,p)>12000) then
              mask2(l, p) = 0
           end if
        end do
@@ -279,7 +293,8 @@ contains
     if (trim(obstype) == 'SAL') then
        do p = 1, nprof
           do l = 1, nlev
-             if (salt_qc(l, p) /= '1' .and. salt_qc(l, p) /= '2') then
+             !if (salt_qc(l, p) /= '1' .and. salt_qc(l, p) /= '2') then
+             if (salt_qc(l, p) /= '1') then
                 mask2(l, p) = 0
              end if
           end do
@@ -290,7 +305,8 @@ contains
     else if (trim(obstype) == 'TEM') then
        do p = 1, nprof
           do l = 1, nlev
-             if (temp_qc(l, p) /= '1' .and. temp_qc(l, p) /= '2') then
+             !if (temp_qc(l, p) /= '1' .and. temp_qc(l, p) /= '2') then
+             if (temp_qc(l, p) /= '1') then
                 mask2(l, p) = 0
              end if
           end do
@@ -345,8 +361,17 @@ contains
           if (mask2(l, p) == 0) then
              cycle
           end if
+          if ((trim(obstype) == 'TEM' .and.&
+               !(temp_qc(l, p) == '1' .or. temp_qc(l, p) == '2')) .and.&
+               temp_qc(l, p) == '1' ).and.&
+               (temp(l, p) < TEM_MIN .or. temp(l, p) > TEM_MAX)) then
+             mask(p) = 0 ! discard the profile
+             mask2(:, p) = 0
+             exit
+          end if
           if ((trim(obstype) == 'SAL' .and.&
-               (salt_qc(l, p) == '1' .or. salt_qc(l, p) == '2')) .and.&
+               !(salt_qc(l, p) == '1' .or. salt_qc(l, p) == '2')) .and.&
+               salt_qc(l, p) == '1' ).and.&
                (salt(l, p) < SAL_MIN .or. salt(l, p) > SAL_MAX)) then
              mask(p) = 0 ! discard the profile
              mask2(:, p) = 0
@@ -367,8 +392,9 @@ contains
        rho_prev = -999.0
        do l = 1, nlev
           if (mask2(l, p) == 0 .or.&
-               (temp_qc(l, p) /= '1' .and. temp_qc(l, p) /= '2') .or.&
-               (salt_qc(l, p) /= '1' .and. salt_qc(l, p) /= '2')) then
+               !(temp_qc(l, p) /= '1' .and. temp_qc(l, p) /= '2') .or.&
+               !(salt_qc(l, p) /= '1' .and. salt_qc(l, p) /= '2')) then
+               temp_qc(l, p) /= '1' .or. salt_qc(l, p) /= '1' ) then
              cycle
           end if
           if (rho_prev == -999.0) then
@@ -504,6 +530,8 @@ contains
              print *, '  p =', p, ', l =', l
              print *, '  # data =', ndata, ', ngood =', ngood
              stop
+          elseif (mod(ndata,10000)==0) then
+            print *, 'ndata=',ndata
           end if
        
           ! PS: I guess we should not bother about the cost of the
@@ -526,21 +554,16 @@ contains
           data(ndata) % ns = 0 ! for a point (not gridded) measurement
           data(ndata) % date = 0 ! assimilate synchronously
 
-          data(ndata) % i_orig_grid = p
-          data(ndata) % j_orig_grid = l
-
-          data(ndata) % status = .true.     ! (active)
-
           call bilincoeff(real(modlon), real(modlat), nx, ny, real(lon(p)), real(lat(p)), ipiv(p),&
                jpiv(p), data(ndata) % a1, data(ndata) % a2, data(ndata) % a3,&
                data(ndata) % a4)
 
-         ! print *, 'mask2(',l,',',p,')=',mask2(l,p), ndata,ngood
-
+          data(ndata) % status = .true. ! (active)
+          data(ndata) % i_orig_grid = p
+          data(ndata) % j_orig_grid = l
 
 #if defined (BLACK_PROFILE)
 ! saving the related measurment information
-    if(present(datainfo)) then
           datainfo(ndata)%id      =  Pdatainfo(p)%id
           datainfo(ndata)%jday    =  Pdatainfo(p)%jday
           datainfo(ndata)%jtime   =  Pdatainfo(p)%jtime
@@ -553,7 +576,6 @@ contains
           datainfo(ndata)%signal  =  Pdatainfo(p)%signal
           datainfo(ndata)%platnum =  Pdatainfo(p)%platnum
           datainfo(ndata)%inifile =  Pdatainfo(p)%inifile
-    endif
 #endif
        end do
     end do
@@ -594,7 +616,7 @@ contains
   subroutine data_inquire(fnames, nfile, nprof, nlev)
     use ifport
     use nfw_mod
-!    implicit none
+
     character(*), intent(in) :: fnames
     integer, intent(inout) :: nfile, nprof, nlev
 
@@ -612,7 +634,7 @@ contains
     nprof = 0
     nlev = 0
 
-    res=system("ls "//trim(fnames)//" > infiles.txt")
+    res=system("ls "//trim(fnames)//" > infiles.txt");
 
     nfile = 0
     open(10, file = 'infiles.txt')
@@ -676,6 +698,12 @@ contains
     integer :: nlev,mlev
 
     real(8), dimension(:,:),allocatable :: tmp_all
+    real(8),   dimension(:),allocatable :: tmp_sub
+    integer,   dimension(:),allocatable :: mask_sub
+
+    ! dealing with bug to read EASY CORA5.2
+    real(8), dimension(1) :: scalefac, fillval, addoffset,varmin,varmax 
+
     integer :: res
 
 #if defined (BLACK_PROFILE)
@@ -746,7 +774,9 @@ contains
     call nfw_get_var_text(fname, ncid, id, pos_qc_all(1 : nprof))
      
     allocate(tmp_all(nlev,nprof))
-    mlev=min(MLEV0,nlev);
+
+    mlev=min(MLEV0,nlev)
+    allocate(mask_sub(nprof),tmp_sub(nprof))
 
     ! adjusted by Jiping 28/07/2015
     if (nfw_var_exists(ncid, 'PRES')) then
@@ -754,10 +784,47 @@ contains
       !
       call nfw_inq_varid(fname, ncid, 'PRES', id)
       call nfw_get_var_double(fname, ncid, id, tmp_all(1 : nlev, 1 : nprof))
-      do f=1,mlev
-        pres_all(f,1:nprof)=tmp_all(f,1:nprof)
-      end do
-      
+      !print '(20f8.1)',tmp_all(1,:)
+      ! dealing with nrt profile in Oct2019
+      if (nfw_var_att_exists(ncid,id,'valid_min') .and.nfw_var_att_exists(ncid,id,'valid_max')) then
+        call nfw_get_att_double(fname, ncid, id, 'valid_min', varmin)
+        call nfw_get_att_double(fname, ncid, id, 'valid_max', varmax)
+      else
+        varmax=0; varmin=0;
+      endif
+      !call nfw_get_att_double(fname, ncid, id, '_FillValue', fillval)
+      if (nfw_var_att_exists(ncid, id, 'scale_factor')) then
+         if (nfw_var_att_exists(ncid, id, 'fill_value')) then
+            call nfw_get_att_double(fname, ncid, id, 'fill_value', fillval)
+         elseif (nfw_var_att_exists(ncid, id, '_FillValue')) then
+            call nfw_get_att_double(fname, ncid, id, '_FillValue', fillval)
+         endif
+         call nfw_get_att_double(fname, ncid, id, 'scale_factor', scalefac)
+         call nfw_get_att_double(fname, ncid, id, 'add_offset', addoffset)
+      else
+         scalefac(1)=1
+         addoffset(1)=0
+      endif
+      !print '(a20,3F13.3)', trim(fname), fillval(:),scalefac(:),addoffset(:)
+      if (varmin(1)<varmax(1).and.varmax(1)>0) then
+        do f=1,mlev
+          tmp_sub(1:nprof)=scalefac(1)*tmp_all(f,1:nprof)+addoffset(1)
+          mask_sub(1:nprof)=0
+          where (tmp_sub(:)>=varmin(1).and.tmp_sub(:)<=varmax(1))
+             mask_sub(:)=1;
+          endwhere
+          where (mask_sub/=1)
+             tmp_sub=99999.
+          endwhere
+          pres_all(f,1:nprof)=tmp_sub(:)
+      !  stop
+        end do
+      else
+        do f=1,mlev
+          pres_all(f,1:nprof)=scalefac(1)*tmp_all(f,1:nprof)+addoffset(1)
+        end do
+      endif
+
       ! pres_qc
       !
       call nfw_inq_varid(fname, ncid, 'PRES_QC', id)
@@ -767,9 +834,43 @@ contains
       !
       call nfw_inq_varid(fname, ncid, 'DEPH', id)
       call nfw_get_var_double(fname, ncid, id, tmp_all(1 : nlev, 1 : nprof))
-      do f=1,mlev
-        pres_all(f,1:nprof)=tmp_all(f,:)
-      end do
+      if (nfw_var_att_exists(ncid,id,'valid_min') .and.nfw_var_att_exists(ncid,id,'valid_max')) then
+        call nfw_get_att_double(fname, ncid, id, 'valid_min', varmin)
+        call nfw_get_att_double(fname, ncid, id, 'valid_max', varmax)
+      else
+        varmin=0; varmax=0
+      endif
+      !call nfw_get_att_double(fname, ncid, id, '_FillValue', fillval)
+      if (nfw_var_att_exists(ncid, id, 'scale_factor')) then
+         if (nfw_var_att_exists(ncid, id, 'fill_value')) then
+            call nfw_get_att_double(fname, ncid, id, 'fill_value', fillval)
+         elseif (nfw_var_att_exists(ncid, id, '_FillValue')) then
+            call nfw_get_att_double(fname, ncid, id, '_FillValue', fillval)
+         endif
+         call nfw_get_att_double(fname, ncid, id, 'scale_factor', scalefac)
+         call nfw_get_att_double(fname, ncid, id, 'add_offset', addoffset)
+      else
+         scalefac(1)=1
+         addoffset(1)=0
+      endif
+      if (varmin(1)<varmax(1).and.varmax(1)>0) then
+        do f=1,mlev
+          tmp_sub(1:nprof)=scalefac(1)*tmp_all(f,1:nprof)+addoffset(1)
+          mask_sub(1:nprof)=0
+          where (tmp_sub(:)>=varmin(1).and.tmp_sub(:)<=varmax(1))
+            mask_sub(:)=1;
+          endwhere
+          where (mask_sub/=1)
+            tmp_sub=99999.
+          endwhere
+          pres_all(f,1:nprof)=tmp_sub(:)
+        end do
+      else
+        do f=1,mlev
+          pres_all(f,1:nprof)=scalefac(1)*tmp_all(f,1:nprof)+addoffset(1)
+        end do
+      endif
+
       ! pres_qc
       !
       call nfw_inq_varid(fname, ncid, 'DEPH_QC', id)
@@ -779,25 +880,100 @@ contains
 
     ! temp
     !
-    call nfw_inq_varid(fname, ncid, 'TEMP', id)
-    call nfw_get_var_double(fname, ncid, id, tmp_all(1 : nlev, 1 : nprof))
-    do f=1,mlev
-      temp_all(f,1:nprof)=tmp_all(f,1:nprof)
-    end do
-    ! temp_qc
-    !
+    if (nfw_var_exists(ncid, 'TEMP')) then
+      call nfw_inq_varid(fname, ncid, 'TEMP', id)
+      call nfw_get_var_double(fname, ncid, id, tmp_all(1 : nlev, 1 : nprof))
+      if (nfw_var_att_exists(ncid,id,'valid_min') .and.nfw_var_att_exists(ncid,id,'valid_max')) then
+        call nfw_get_att_double(fname, ncid, id, 'valid_min', varmin)
+        call nfw_get_att_double(fname, ncid, id, 'valid_max', varmax)
+      else
+        varmin=0; varmax=0;
+      endif
 
-    call nfw_inq_varid(fname, ncid, 'TEMP_QC', id)
-    call nfw_get_var_text(fname, ncid, id, temp_qc_all(1 : nlev, 1 : nprof))
+      !call nfw_get_att_double(fname, ncid, id, '_FillValue', fillval)
+      if (nfw_var_att_exists(ncid, id, 'scale_factor')) then
+         if (nfw_var_att_exists(ncid, id, 'fill_value')) then
+            call nfw_get_att_double(fname, ncid, id, 'fill_value', fillval(1))
+         elseif (nfw_var_att_exists(ncid, id, '_FillValue')) then
+            call nfw_get_att_double(fname, ncid, id, '_FillValue', fillval(1))
+         endif
+
+        call nfw_get_att_double(fname, ncid, id, 'scale_factor', scalefac(1))
+        call nfw_get_att_double(fname, ncid, id, 'add_offset', addoffset(1))
+      else
+        scalefac(1)=1
+        addoffset(1)=0
+      endif
+
+      if (varmin(1)<varmax(1).and.varmax(1)>0) then
+        do f=1,mlev
+          tmp_sub(1:nprof)=scalefac(1)*tmp_all(f,1:nprof)+addoffset(1)
+          mask_sub(1:nprof)=0
+          where (tmp_sub(:)>=varmin(1).and.tmp_sub(:)<=varmax(1))
+            mask_sub(:)=1
+          endwhere
+          where (mask_sub/=1)
+            tmp_sub=99999.
+          endwhere
+          temp_all(f,1:nprof)=tmp_sub(:)
+          !print '(200F13.1)', tmp_sub(:)
+        end do
+      else
+        do f=1,mlev
+          temp_all(f,1:nprof)=scalefac(1)*tmp_all(f,1:nprof)+addoffset(1)
+        end do
+      endif
+
+      ! temp_qc
+      !
+      call nfw_inq_varid(fname, ncid, 'TEMP_QC', id)
+      call nfw_get_var_text(fname, ncid, id, temp_qc_all(1 : nlev, 1 : nprof))
+    else
+       temp_qc_all = 'E';
+    endif
 
     if (nfw_var_exists(ncid, 'PSAL')) then
        ! psal
        !
        call nfw_inq_varid(fname, ncid, 'PSAL', id)
        call nfw_get_var_double(fname, ncid, id, tmp_all(1 : nlev, 1 : nprof))
-       do f=1,mlev
-         salt_all(f,1:nprof)=tmp_all(f,1:nprof)
-       end do
+       if (nfw_var_att_exists(ncid,id,'valid_min') .and.nfw_var_att_exists(ncid,id,'valid_max')) then
+         call nfw_get_att_double(fname, ncid, id, 'valid_min', varmin)
+         call nfw_get_att_double(fname, ncid, id, 'valid_max', varmax)
+       else
+         varmin=0;  varmax=0
+       endif
+       
+       if (nfw_var_att_exists(ncid, id, 'scale_factor')) then
+          if (nfw_var_att_exists(ncid, id, 'fill_value')) then
+             call nfw_get_att_double(fname, ncid, id, 'fill_value', fillval(1))
+          elseif (nfw_var_att_exists(ncid, id, '_FillValue')) then
+             call nfw_get_att_double(fname, ncid, id, '_FillValue', fillval(1))
+          endif
+          call nfw_get_att_double(fname, ncid, id, 'scale_factor', scalefac)
+          call nfw_get_att_double(fname, ncid, id, 'add_offset', addoffset)
+       else
+          scalefac(1)=1
+          addoffset(1)=0
+       endif
+
+      if (varmin(1)<varmax(1).and.varmax(1)>0) then
+        do f=1,mlev
+          tmp_sub(1:nprof)=scalefac(1)*tmp_all(f,1:nprof)+addoffset(1)
+          mask_sub(1:nprof)=0
+          where (tmp_sub(:)>=varmin(1).and.tmp_sub(:)<=varmax(1))
+             mask_sub(:)=1
+          endwhere
+          where (mask_sub/=1)
+            tmp_sub=99999.
+          endwhere
+          salt_all(f,1:nprof)=tmp_sub(:)
+        end do
+      else
+        do f=1,mlev
+          salt_all(f,1:nprof)=scalefac(1)*tmp_all(f,1:nprof)+addoffset(1)
+        end do
+      endif
 
        ! psal_qc
        !
@@ -809,6 +985,7 @@ contains
 
 
     deallocate(tmp_all)
+    deallocate(mask_sub,tmp_sub)
 
 #if defined (BLACK_PROFILE)
     ! PLATFORM_NUMBER
