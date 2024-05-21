@@ -597,7 +597,6 @@ subroutine nfw_get_var_double2D(fname, ncid, varid, vlevel,v,nx,ny)
     end if
   end subroutine nfw_get_var_double2D
 
-
   subroutine nfw_get_var_text(fname, ncid, varid, v)
     character*(*), intent(in) :: fname
     integer, intent(in) :: ncid

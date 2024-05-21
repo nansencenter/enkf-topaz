@@ -258,47 +258,47 @@ contains
       return
       end subroutine hybgen_weno_remap
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
+! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
 
-      integer function tracr_get_incr(char2) 
-      !function returns the number of the tracer.
-      !char => integer
-      implicit none        
-      character(len=2) :: char2
+!       integer function tracr_get_incr(char2) 
+!       !function returns the number of the tracer.
+!       !char => integer
+!       implicit none        
+!       character(len=2) :: char2
       
-      tracr_get_incr=-1
-      select case (char2)
-         case ('01')
-           tracr_get_incr=1
-	 case ('02')
-           tracr_get_incr=2
-	 case ('03')
-           tracr_get_incr=3
-	 case ('04')
-           tracr_get_incr=4
-	 case ('05')
-           tracr_get_incr=5
-	 case ('06')
-           tracr_get_incr=6
-	 case ('07')
-           tracr_get_incr=7
-	 case ('08')
-           tracr_get_incr=8
-	 case ('09')
-           tracr_get_incr=9 
-	 case ('10')
-           tracr_get_incr=10
-	 case ('11')
-           tracr_get_incr=11
-	 case default
-           print *,'tracer unknown',char2
-      end select
-      return
+!       tracr_get_incr=-1
+!       select case (char2)
+!          case ('01')
+!            tracr_get_incr=1
+! 	 case ('02')
+!            tracr_get_incr=2
+! 	 case ('03')
+!            tracr_get_incr=3
+! 	 case ('04')
+!            tracr_get_incr=4
+! 	 case ('05')
+!            tracr_get_incr=5
+! 	 case ('06')
+!            tracr_get_incr=6
+! 	 case ('07')
+!            tracr_get_incr=7
+! 	 case ('08')
+!            tracr_get_incr=8
+! 	 case ('09')
+!            tracr_get_incr=9 
+! 	 case ('10')
+!            tracr_get_incr=10
+! 	 case ('11')
+!            tracr_get_incr=11
+! 	 case default
+!            print *,'tracer unknown',char2
+!       end select
+!       return
       
-      end function
+!       end function
 
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
+! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
       integer function compute_kisop(temp,sal,nz) 
       !function defines which layers are isopycnal 
       implicit none             
@@ -352,6 +352,77 @@ contains
  
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
       
+  !     real function sig_ref(k)
+  !     !function return the value of the target density for a given layer
+  !     implicit none
+  !     integer::k
+      
+  !     select case (k) 
+  !       case (1)
+	!   sig_ref=0.1
+	! case (2)
+	!   sig_ref=0.2 
+	! case (3)
+	!   sig_ref=0.3 	  
+	! case (4)
+	!   sig_ref=0.4 	   
+ 	! case (5)
+	!   sig_ref=0.5 
+  !       case (6)
+	!   sig_ref=24.05
+	! case (7)
+	!   sig_ref=24.96 
+	! case (8)
+	!   sig_ref=25.68 	  
+	! case (9)
+	!   sig_ref=26.05 	   
+ 	! case (10)
+	!   sig_ref=26.30 	  
+  !       case (11)
+	!   sig_ref=26.60
+	! case (12)
+	!   sig_ref=26.83 
+	! case (13)
+	!   sig_ref=27.03 	  
+	! case (14)
+	!   sig_ref=27.20 	   
+ 	! case (15)
+	!   sig_ref=27.33 
+  !       case (16)
+	!   sig_ref=27.46
+	! case (17)
+	!   sig_ref=27.55 
+	! case (18)
+	!   sig_ref=27.66 	  
+	! case (19)
+	!   sig_ref=27.74 	   
+ 	! case (20)
+	!   sig_ref=27.82 	  
+	! case (21)
+	!   sig_ref=27.90
+	! case (22)
+	!   sig_ref=27.97 
+	! case (23)
+	!   sig_ref=28.01 	  
+	! case (24)
+	!   sig_ref=28.04 	   
+ 	! case (25)
+	!   sig_ref=28.07 
+  !       case (26)
+	!   sig_ref=28.09
+	! case (27)
+	!   sig_ref=28.11 
+	! case (28)
+	!   sig_ref=28.13 
+       
+  !     end select    
+	       
+  !     return	 
+      
+  !     end function
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
+      
       real function sig_ref(k)
       !function return the value of the target density for a given layer
       implicit none
@@ -359,66 +430,110 @@ contains
       
       select case (k) 
         case (1)
-	  sig_ref=0.1
-	case (2)
-	  sig_ref=0.2 
-	case (3)
-	  sig_ref=0.3 	  
-	case (4)
-	  sig_ref=0.4 	   
- 	case (5)
-	  sig_ref=0.5 
+	        sig_ref=0.1
+	      case (2)
+	        sig_ref=0.2 
+	      case (3)
+	        sig_ref=0.3 	  
+	      case (4)
+	        sig_ref=0.4 	   
+ 	      case (5)
+	        sig_ref=0.5 
         case (6)
-	  sig_ref=24.05
-	case (7)
-	  sig_ref=24.96 
-	case (8)
-	  sig_ref=25.68 	  
-	case (9)
-	  sig_ref=26.05 	   
- 	case (10)
-	  sig_ref=26.30 	  
+	        sig_ref=0.6
+	      case (7)
+	        sig_ref=0.7
+	      case (8)
+	        sig_ref=0.8 	  
+	      case (9)
+	        sig_ref=0.9 	   
+ 	      case (10)
+	        sig_ref=1.0 	  
         case (11)
-	  sig_ref=26.60
-	case (12)
-	  sig_ref=26.83 
-	case (13)
-	  sig_ref=27.03 	  
-	case (14)
-	  sig_ref=27.20 	   
- 	case (15)
-	  sig_ref=27.33 
+	        sig_ref=24.05
+	      case (12)
+	        sig_ref=25.72 
+	      case (13)
+	        sig_ref=26.40 	  
+	      case (14)
+	        sig_ref=26.90 	   
+ 	      case (15)
+	        sig_ref=27.13 
         case (16)
-	  sig_ref=27.46
-	case (17)
-	  sig_ref=27.55 
-	case (18)
-	  sig_ref=27.66 	  
-	case (19)
-	  sig_ref=27.74 	   
- 	case (20)
-	  sig_ref=27.82 	  
-	case (21)
-	  sig_ref=27.90
-	case (22)
-	  sig_ref=27.97 
-	case (23)
-	  sig_ref=28.01 	  
-	case (24)
-	  sig_ref=28.04 	   
- 	case (25)
-	  sig_ref=28.07 
+	        sig_ref=27.19
+	      case (17)
+	        sig_ref=27.25 
+	      case (18)
+	        sig_ref=27.29 	  
+	      case (19)
+	        sig_ref=27.34 	   
+ 	      case (20)
+	        sig_ref=27.42 	  
+	      case (21)
+	        sig_ref=27.50
+	      case (22)
+	        sig_ref=27.56 
+	      case (23)
+	        sig_ref=27.63 	  
+	      case (24)
+	        sig_ref=27.66 	   
+ 	      case (25)
+	        sig_ref=27.69 
         case (26)
-	  sig_ref=28.09
-	case (27)
-	  sig_ref=28.11 
-	case (28)
-	  sig_ref=28.13 
+	        sig_ref=27.72
+	      case (27)
+	        sig_ref=27.74 
+	      case (28)
+	        sig_ref=27.76
+        case (29)
+	        sig_ref=27.78
+        case (30)
+	        sig_ref=27.80
+        case (31)
+	        sig_ref=27.82
+        case (32)
+	        sig_ref=27.85
+        case (33)
+	        sig_ref=27.87
+        case (34)
+	        sig_ref=27.90
+        case (35)
+	        sig_ref=27.93
+        case (36)
+	        sig_ref=27.95
+        case (37)
+	        sig_ref=27.97
+        case (38)
+	        sig_ref=27.99
+        case (39)
+	        sig_ref=28.01
+        case (40)
+	        sig_ref=28.02
+        case (41)
+	        sig_ref=28.03
+        case (42)
+	        sig_ref=28.04
+        case (43)
+	        sig_ref=28.05
+        case (44)
+	        sig_ref=28.06
+        case (45)
+	        sig_ref=28.07
+        case (46)
+	        sig_ref=28.08
+        case (47)
+	        sig_ref=28.09
+        case (48)
+	        sig_ref=28.10
+        case (49)
+	        sig_ref=28.11
+        case (50)
+	        sig_ref=28.12
        
       end select    
 	       
       return	 
+
       
       end function
- 
 end module
