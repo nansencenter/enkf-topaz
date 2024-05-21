@@ -67,6 +67,7 @@
 ! 20/09/2019 PS: added nfw_var_att_exists(ncid, varid, attname, type,length)
 !                nfw_put_att_real(fname, ncid, varid, attname, type, length, v)
 !                nfw_get_att_real(fname, ncid, varid, attname, v)
+! ??/??/2023 PS: nfw_get_var_double2D(fname, ncid, varid, vlevel,v,nx,ny)
 
 module nfw_mod
   implicit none
@@ -548,6 +549,54 @@ contains
        call quit2(fname, 'nf_get_var_double', name, status)
     end if
   end subroutine nfw_get_var_double
+
+
+subroutine nfw_get_var_double2D(fname, ncid, varid, vlevel,v,nx,ny)
+    character*(*), intent(in) :: fname
+    integer, intent(in) :: ncid
+    integer, intent(in) :: varid
+    integer, intent(in) :: vlevel,nx,ny
+    real(8), intent(out) :: v(nx,ny)
+
+    character*(NF_MAX_NAME) :: name
+    integer :: status
+    integer :: ndims
+    integer :: idims(3), vdims(3)
+    real(8), allocatable :: tmpfld(:,:,:)
+    integer              :: len1,len2,len3
+ 
+    ! inquire ndims for this variable
+    status=nf_inq_varndims(ncid,varid,ndims)
+    if (status /= 0) then
+       call quit2(fname, 'nf_get_var_double2D', 'inq_ndims', status)
+    end if
+    if (ndims==3) then   ! ni, nj, ncat or other order
+      status = nf_inq_dimid(ncid, 'ni',idims(1))
+      status = nf_inq_dimid(ncid, 'nj',idims(2))
+      status = nf_inq_dimid(ncid, 'ncat',idims(3))
+      status = nf_inq_vardimid(ncid, varid,vdims)
+      status=nf_inq_dim(ncid,vdims(1),name,len1)
+      status=nf_inq_dim(ncid,vdims(2),name,len2)
+      status=nf_inq_dim(ncid,vdims(3),name,len3)
+!      print *, 'variable dims order: ', vdims(:),len1,len2,len3
+      allocate(tmpfld(len1,len2,len3))
+      status = nf_get_var_double(ncid, varid, tmpfld)
+!      status = nf_get_var_double(ncid, varid, (/1,1,vlevel/),(/len1,len2,1/),v)
+      if (status /= 0) then
+         call nfw_inq_varname(fname, ncid, varid, name)
+         call quit2(fname, 'nfw_get_var_double2D', name, status)
+      end if
+      v=tmpfld(:,:,vlevel); 
+      deallocate(tmpfld)
+    end if 
+
+    !status = nf_get_var_double(ncid, varid, istart,icount,v)
+    if (status /= 0) then
+       call nfw_inq_varname(fname, ncid, varid, name)
+       call quit2(fname, 'nf_get_var_double2D', name, status)
+    end if
+  end subroutine nfw_get_var_double2D
+
 
   subroutine nfw_get_var_text(fname, ncid, varid, v)
     character*(*), intent(in) :: fname
