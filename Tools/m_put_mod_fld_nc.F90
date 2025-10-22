@@ -278,10 +278,10 @@ subroutine fix_cice(fice,hice,sss,nx,ny,ncat,restart,icerestart,yearday,Ahice,Va
                   else
                      vicen(i,j,k)=0; vsnon(i,j,k)=0; aicen(i,j,k)=0
                   endif
-               end do
+               enddo
             else
                if (Vadjust==1) then
-                  vicen(i,j,:)=0.; vsnon(i,j,:)=0
+                  vicen(i,j,:)=0.; vsnon(i,j,:)=0.
                elseif (Vadjust==2) then   ! considering the new ice generation by DA
                   do k=1,ncat
                      if (aicen(i,j,k)>0) then
