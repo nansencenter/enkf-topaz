@@ -93,15 +93,19 @@ program p_prep_obs
   integer        :: iday
   character*4    :: lday
   
+  iday=0
   call getarg(1,options)
   if (trim(options)=="tsla" .or. trim(options)=="TSLA") then
     call getarg(2,options)
     read(options,*) iday 
-    write(lday,'(i2)') iday
+  else if (trim(options)=="sst" .or. trim(options)=="SST") then
+    call getarg(2,options)
+    read(options,*) iday 
   else
     iday=1    ! asynchronously in present version
-    write(lday,'(i2)') iday
   end if
+  write(lday,'(i2)') iday
+  print *,"iday=", iday
   
 
   gr = default_grid
@@ -156,7 +160,7 @@ program p_prep_obs
         grpoints = gr % nx * gr % ny
         allocate(data(grpoints))
         allocate(obs(maxobs))
-        call read_MET_SST(fname, gr, data)
+        call read_MET_SST(fname, gr, data,iday)
      else
         stop 'ERROR: OSTIA (MET) only produces SST'
      endif
@@ -214,6 +218,16 @@ program p_prep_obs
         stop
      endif
 
+  else if (trim(Producer) == 'MLTP4') then
+     if (trim(obstype) == 'HICE') then
+        dosuperob = .true.
+        call read_mltp4_hice(fname, data, gr)
+        allocate (obs(size(data)))
+     else
+        print *, 'There can be no ', obstype,' data from', Producer
+        stop
+     endif
+
   elseif (trim(producer) == 'CLS') then
 
      if (trim(obstype) == 'SLA') then
@@ -244,13 +258,11 @@ program p_prep_obs
 
      elseif (trim(obstype) == 'TSLA') then
         dosuperob = .true.
-        !call read_CLS_TSLA_grid(fnamehdr, gr)
         call read_MYO_TSLA_grid(fnamehdr, gr)
         print *, 'read_CLS_TSLA_grid finished, total # of obs = ', gr % nx 
         grpoints = gr % nx 
         allocate(data(grpoints))
         allocate(obs(maxobs))
-        !call read_CLS_TSLA(fname,gr,data)
         call read_MYO_TSLA(fname,'1',gr,data)
      else
         print *, 'data of type "', trim(obstype),'"  from producer "', producer, '" is not handled'
@@ -526,7 +538,9 @@ subroutine check_forland(data, depths, nrobs, ni, nj)
      jmin = max(1, data(o) % jpiv - 1)
      imax = min(ni, data(o) % ipiv + 2)
      jmax = min(nj, data(o) % jpiv + 2)
-     if (any(depths(imin:imax,jmin:jmax) < 10.0 .or. depths(imin:imax,jmin:jmax) == depths(imin:imax,jmin:jmax) + 1.0)) then
+     if (any(depths(imin:imax,jmin:jmax) < 5.0 .or.       &
+         depths(imin:imax,jmin:jmax) == depths(imin:imax, &
+         jmin:jmax) + 1.0)) then
         data(o) % status = .false.
         nmasked = nmasked + 1
      end if

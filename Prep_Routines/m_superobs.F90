@@ -271,21 +271,50 @@ module m_superobs
     nz = size(z)
 
     do i = 1, nz
-       if (z(i) < 3.0d0) then
+       if (z(i) < 2.0d0) then
           z2k(i) = 1
-       elseif (z(i) < 6.0d0) then
+       elseif (z(i) < 5.0d0) then
           z2k(i) = 2
        elseif (z(i) < 10.0d0) then
-          z2k(i) = 3
-       elseif (z(i) < 100.0d0) then
-          z2k(i) = int(z(i) / 10.0d0) + 3
+          z2k(i) = 3 
+       elseif (z(i) < 15.0d0) then
+          z2k(i) = 4 
+       elseif (z(i) < 20.0d0) then
+          z2k(i) = 5 
+       elseif (z(i) < 200.0d0) then
+          z2k(i) = int(z(i) / 10.0d0) + 4
        elseif (z(i) < 1000.0d0) then
-          z2k(i) = int(z(i) / 25.0d0) + 9
+          z2k(i) = int(z(i) / 25.0d0) + 16
        else
-          z2k(i) = int(z(i) / 50.0d0) + 29
+          z2k(i) = int(z(i) / 50.0d0) + 36
        end if
     end do
   end function z2k
+
+  function z2k0(z)
+    real, intent(in), dimension(:) :: z
+    integer, dimension(size(z)) :: z2k0
+
+    integer :: i, nz
+
+    nz = size(z)
+
+    do i = 1, nz
+       if (z(i) < 3.0d0) then
+          z2k0(i) = 1
+       elseif (z(i) < 6.0d0) then
+          z2k0(i) = 2
+       elseif (z(i) < 10.0d0) then
+          z2k0(i) = 3
+       elseif (z(i) < 100.0d0) then
+          z2k0(i) = int(z(i) / 10.0d0) + 3
+       elseif (z(i) < 1000.0d0) then
+          z2k0(i) = int(z(i) / 25.0d0) + 9
+       else
+          z2k0(i) = int(z(i) / 50.0d0) + 29
+       end if
+    end do
+  end function z2k0
 
 
   subroutine superobs_dump(tag, id, ids, n)
