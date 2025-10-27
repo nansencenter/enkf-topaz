@@ -172,7 +172,9 @@ contains
     integer :: i,j,k,icomp
     integer :: drnx, drny
     logical :: valid
+    real    :: timelag
 
+    read(offset,*) timelag 
     ! Get dimensions of drift file
     call nfw_open(driftfile, nf_nowrite, ncid)
     call nfw_inq_varid(driftfile, ncid, 'dX', dx_id)
@@ -220,26 +222,27 @@ contains
     call nfw_inq_varid(driftfile, ncid, 'dY', dy_id)
     call nfw_get_var_double(driftfile, ncid, dy_id, drdY)
 
-    ! Adding the uncertainty of DX/DY (one standard deviation)
-    call nfw_inq_varid(driftfile, ncid, 'uncert_dX_and_dY', uncertdxy_id)
-    call nfw_get_var_double(driftfile, ncid, uncertdxy_id, undxy)
-
     call nfw_get_att_double(driftfile, ncid, dx_id, '_FillValue', fillval)
-
     where (abs(drdX - fillval(1)) < 1e-4 * fillval(1))
        drdX = gr % undef
     end where
 
     call nfw_get_att_double(driftfile, ncid, dy_id, '_FillValue', fillval)
-
     where (abs(drdY - fillval(1)) < 1e-4 * fillval(1))
        drdY = gr % undef
     end where
 
-    where (abs(undxy - fillval(1)) < 1e-4 * fillval(1))
-       drdY = gr % undef
-       drdX = gr % undef
-    end where
+    ! Adding the uncertainty of DX/DY (one standard deviation)
+    if (nfw_var_exists(ncid, 'uncert_dX_and_dY')) then
+       call nfw_inq_varid(driftfile, ncid, 'uncert_dX_and_dY', uncertdxy_id)
+       call nfw_get_var_double(driftfile, ncid, uncertdxy_id, undxy)
+       where (abs(undxy - fillval(1)) < 1e-4 * fillval(1))
+          drdY = gr % undef
+          drdX = gr % undef
+       end where
+    else
+       undxy=var
+    endif
 
     !print *,'fillval:', fillval(1),gr%undef
     !print *,        abs((fillval(1)-gr%undef) / gr%undef)
@@ -282,10 +285,21 @@ contains
              data(k)%lon=ang180(real(drlon(i,j)))
              ! Each vector represents the average drift of a 120kmx120km area of sea ice
              ! The a1 value should be in meters, although other values are in km
-             data(k)%a1 = 1.4*60000 ! 1.4 represents square root of 2
+             if (gr%dx<42000) then
+                data(k)%a1 = 1.4*70000 ! 1.4 represents square root of 2
+             else
+                data(k)%a1 = 1.4*62500 ! 1.4 represents square root of 2
+             endif
              data(k)%ns = 1
              !data(k)%var = var ! fom idrft.hdr specification
-             data(k)%var = max(var,undxy(i,j)**2) ! fom idrft.hdr specification
+             !data(k)%var = max(var,undxy(i,j)**2) ! fom idrft.hdr specification
+             ! introduced in Sep 2025 to consider two types of drift products from OSISAF
+             if (abs(timelag)>2) then
+                data(k)%var = min(var,4.*undxy(i,j)**2)+(2.*abs(timelag-2.))**2 ! fom idrft.hdr specification
+             else
+                data(k)%var = min(var,4.*undxy(i,j)**2) ! fom idrft.hdr specification
+             endif
+
              data(k)%depth = 0.0
              data(k)%status = valid
           enddo

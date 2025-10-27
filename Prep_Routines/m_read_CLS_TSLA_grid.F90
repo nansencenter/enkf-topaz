@@ -76,6 +76,7 @@ contains
        endif
     enddo
   end subroutine read_CLS_TSLA_grid
+
   subroutine read_MYO_TSLA_grid(filename,gr)
     !use mod_dimensions
     use mod_grid
@@ -96,14 +97,19 @@ contains
     integer :: ncid,fcount
     character(STRLEN) :: Fpath
     character(STRLEN) :: ftemplate
+    character(STRLEN) :: command ! (there may be a limit of 80 on some systems)
 
     print *, 'read_MYO_TSLA_grid():'
+    print *,'sla_'//trim(filename)//'_*.nc'
+    !command = "ls sla_'//trim(ftemplate)//'_*.nc' 2> /dev/null > tsla_files.txt"
+    !call system(trim(command));
+    !stop
 
     gr = default_grid
     gr%nx=0
     Fpath='./'
     ! Open file
-    do fcount=1,13   !2 satellite Envissat,J2
+    do fcount=1,15   !2 satellite Envissat,J2  maximum obserations 
        select case(fcount)
        case(1)
           ftemplate=trim(Fpath)//'sla_'//trim(filename)//'_en*.nc'
@@ -128,9 +134,13 @@ contains
        case(11)
           ftemplate = trim(fpath)//'sla_'//trim(filename)//'_j3*.nc'
        case(12)
-          ftemplate = trim(fpath)//'sla_'//trim(filename)//'_s3*.nc'
+          ftemplate = trim(fpath)//'sla_'//trim(filename)//'_s3a.nc'
        case(13)
+          ftemplate = trim(fpath)//'sla_'//trim(filename)//'_s3b.nc'
+       case(14)
           ftemplate = trim(fpath)//'sla_'//trim(filename)//'_s6*.nc'
+       case(15)
+          ftemplate = trim(fpath)//'sla_'//trim(filename)//'_swo*.nc'
        end select
        call fname_fromtemplate(ftemplate, fname)
        inquire(file=trim(fname),exist=ex)
@@ -169,7 +179,8 @@ contains
     integer :: ios
 
     command = 'ls '//trim(ftemplate)//' 2> /dev/null > tsla_files.txt'
-    call system(trim(command));
+    print *,trim(command)
+    call system(trim(command))
 
     open(10, file = 'tsla_files.txt')
     read(10, fmt = '(a)', iostat = ios) fname
@@ -178,5 +189,6 @@ contains
        fname = ""
     end if
   end subroutine fname_fromtemplate
+
 
 end module m_read_CLS_TSLA_grid

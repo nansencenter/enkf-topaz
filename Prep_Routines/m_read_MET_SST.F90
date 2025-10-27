@@ -5,7 +5,7 @@ module m_read_MET_SST
 
 contains
 
-  subroutine read_MET_SST(filename,gr,data)
+  subroutine read_MET_SST(filename,gr,data,Dflg)
     use mod_measurement
     use mod_grid
     use m_spherdist
@@ -14,8 +14,9 @@ contains
     implicit none
 
     type (measurement),  intent(inout) :: data(:)
-    type (grid),         intent(inout) :: gr ! CLS measurement grid
-    character(len=80),   intent(in) :: filename
+    type (grid),         intent(inout) :: gr       ! measurement grid
+    character(len=80),      intent(in) :: filename
+    integer,                intent(in) :: Dflg     ! different product formats
 
     ! Variable ids
     integer :: lon_ID, lat_ID,vsst_ID, vstd_ID, vmask_ID
@@ -26,11 +27,10 @@ contains
     real*8, dimension(1) :: undef_sst
     integer :: i, j, count1
     real, parameter :: eps = 0.01  ! test for undefined values
-#if (defined CCI_SST || defined C3S_SST || defined NRT_SST)
-    real, parameter :: Lscale = 6  ! enlarge times
-#else
-    real, parameter :: Lscale = 8  ! enlarge times default used after 2018 
-#endif
+
+    ! enlarge times for the error variance changed in Sep 2025
+    real            :: Lscale
+
     ! filen name
     logical         :: ex
 
@@ -48,13 +48,21 @@ contains
        call nfw_inq_varid(filename, ncid, 'lat', lat_ID)
        call nfw_inq_varid(filename, ncid,'lon', lon_ID)
        call nfw_inq_varid(filename, ncid,'analysed_sst' ,vsst_ID)
-#if defined (CCI_SST)
-       call nfw_inq_varid(filename, ncid,'analysed_sst_uncertainty' ,vstd_ID)
-#elif defined (C3S_SST)
-       call nfw_inq_varid(filename, ncid,'analysis_uncertainty' ,vstd_ID)
-#else
-       call nfw_inq_varid(filename, ncid,'analysis_error' ,vstd_ID)
-#endif
+       if (Dflg==1) then   ! to avoid the discontinuety in the real operational run
+          ! nrt product OSTIA SST
+          call nfw_inq_varid(filename, ncid,'analysis_error' ,vstd_ID)
+          ! enlarge times default used in TOPAZ4 
+          Lscale=6.0
+      
+       elseif (Dflg==2) then
+          ! ESACCI SST <=2016
+          call nfw_inq_varid(filename, ncid,'analysed_sst_uncertainty' ,vstd_ID)
+          Lscale=4.0
+       else
+          ! C3S2 SST <=2024
+          call nfw_inq_varid(filename, ncid,'analysis_error_sst' ,vstd_ID)
+          Lscale=6.0
+       endif
        call nfw_inq_varid(filename, ncid,'mask' ,vmask_ID)
        
        ! Variable _FillValue attributes
