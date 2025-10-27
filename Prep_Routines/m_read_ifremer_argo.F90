@@ -29,16 +29,15 @@
 !
 ! Modifications: 17/08/2010 PS: skip discarding close profiles
 ! 1) skipping *_qc=2 in the profile March 2024
-!
+! 2) JULD replaced by TIME in the initial NC file in Dec 2024
 
 module m_read_ifremer_argo
   implicit none
 
   integer, parameter, private :: STRLEN =2180
-  integer, parameter, private :: MLEV0 = 1000   ! changed back for NRT profile at Oct2019
-  !integer, parameter, private :: MLEV0 = 2000   ! changed for NRT profile Jan2024 
+  !integer, parameter, private :: MLEV0 = 1000   ! changed back for NRT profile at Oct2019
+  integer, parameter, private :: MLEV0 = 2000   ! changed for NRT profile Jan2024 
   !integer, parameter, private :: MLEV0 = 4000
-  !real, parameter, private :: SAL_MIN = 16.0
   !real, parameter, private :: SAL_MIN = 20.0     ! tuning in March 2020
   real, parameter, private :: SAL_MIN = 16.0     ! tuning back Jan 2024
   real, parameter, private :: SAL_MAX = 37.5
@@ -63,6 +62,7 @@ contains
     use m_bilincoeff
     use m_pivotp
     use nfw_mod
+    implicit none
     
     character(*), intent(in) :: fnames
     character(*), intent(in) :: obstype
@@ -201,9 +201,9 @@ contains
     ! mask <- juld_qc, pos_qc, pres_qc, v_qc
     !
     allocate(mask(nprof))
-    mask(:) = 1
+    mask = 1
     allocate(mask2(nlev, nprof))
-    mask2(:, :) = 1
+    mask2 = 1
 #if defined (BLACK_PROFILE)
     ! different signal for QC type:
     allocate(mask_0(nprof),mask_1(nprof),mask_2(nprof),mask_3(nprof))
@@ -219,10 +219,11 @@ contains
           mask2(:, p) = 0
        end if
     end do
-    print *, '  after examining JULD_QC:'
+    print *, '  after examining TIME_QC:'
     print *, '    ', count(mask == 1), ' good profiles'
     print *, '    ', count(mask2 == 1), ' good obs'
 
+    print *, "error 0"
     where (pos_qc /= '1' ) mask = 0
     !where (pos_qc /= '1' .and. pos_qc /= '2') mask = 0
     do p = 1, nprof
@@ -276,7 +277,7 @@ contains
              mask2(l, p) = 0
              continue
           end if
-          if (pres(l,p)>12000) then
+          if (pres(l,p)>1900) then
              mask2(l, p) = 0
           end if
        end do
@@ -486,8 +487,9 @@ contains
     ngood = count(mask2 == 1)
     allocate(data(ngood))
     if(present(datainfo)) then
-      allocate(datainfo(ngood))
+       allocate(datainfo(ngood))
     endif
+
 
 #if defined (BLACK_PROFILE)
     do p = 1, nprof
@@ -671,8 +673,9 @@ contains
   end subroutine data_inquire
 
 
-  subroutine data_readfile(fid, obstype, nprof, juld_all, juld_qc_all,&
-    lat_all, lon_all, pos_qc_all, pres_all, pres_qc_all, temp_all, temp_qc_all, salt_all, salt_qc_all,Pfname,Pfile)
+  subroutine data_readfile(fid, obstype, nprof, juld_all, juld_qc_all, &
+             lat_all, lon_all, pos_qc_all, pres_all, pres_qc_all,      &
+             temp_all,temp_qc_all, salt_all, salt_qc_all,Pfname,Pfile)
     use ifport
     use nfw_mod
     integer, intent(in) :: fid
@@ -692,19 +695,26 @@ contains
     character(len=100), intent(inout), optional :: Pfile
 
     character(STRLEN) :: fname
-    integer :: f
+    integer :: f,ff
     integer :: ncid
     integer :: id
     integer :: nlev,mlev
 
     real(8), dimension(:,:),allocatable :: tmp_all
-    real(8),   dimension(:),allocatable :: tmp_sub
+    real(8),   dimension(:),allocatable :: tmp_sub,tmp_dep
     integer,   dimension(:),allocatable :: mask_sub
 
     ! dealing with bug to read EASY CORA5.2
-    real(8), dimension(1) :: scalefac, fillval, addoffset,varmin,varmax 
+    real(8), dimension(1) :: scalefac, fillval, addoffset
+    real(8), dimension(1) :: varmin,varmax 
 
     integer :: res
+    integer*1,  dimension(:),allocatable :: tmp_qc
+    integer*1,dimension(:,:),allocatable :: tmp_qc2
+
+    ! optional of PRES and DEPH
+    logical      :: Tpres    ! PRES as first option if true
+    integer      :: ff0
 
 #if defined (BLACK_PROFILE)
     character*100 Fsur
@@ -716,6 +726,7 @@ contains
 
     character*32 :: tmpstr0
     character,dimension(:,:),allocatable ::tmp_str
+
 #endif    
     open(10, file = 'infiles.txt')
     do f = 1, fid
@@ -748,15 +759,22 @@ contains
     call nfw_inq_dimid(fname, ncid, 'N_LEVELS', id)
     call nfw_inq_dimlen(fname, ncid, id, nlev)
 
+    allocate(tmp_qc(nprof))
     ! juld
     !
-    call nfw_inq_varid(fname, ncid, 'JULD', id)
+    !call nfw_inq_varid(fname, ncid, 'JULD', id)
+    call nfw_inq_varid(fname, ncid, 'TIME', id)
     call nfw_get_var_double(fname, ncid, id, juld_all(1 : nprof))
 
     ! juld_qc
     !
-    call nfw_inq_varid(fname, ncid, 'JULD_QC', id)
-    call nfw_get_var_text(fname, ncid, id, juld_qc_all(1 : nprof))
+    !call nfw_inq_varid(fname, ncid, 'JULD_QC', id)
+    call nfw_inq_varid(fname, ncid, 'TIME_QC', id)
+    !call nfw_get_var_text(fname, ncid, id, juld_qc_all(1 : nprof))
+    call nfw_get_var_int1(fname, ncid, id, tmp_qc(1 : nprof))
+    do f=1,nprof
+       write (juld_qc_all(f),'(i1)') tmp_qc(f)
+    end do
 
     ! lat
     !
@@ -771,15 +789,55 @@ contains
     ! pos_qc
     !
     call nfw_inq_varid(fname, ncid, 'POSITION_QC', id)
-    call nfw_get_var_text(fname, ncid, id, pos_qc_all(1 : nprof))
+    !call nfw_get_var_text(fname, ncid, id, pos_qc_all(1 : nprof))
+    call nfw_get_var_int1(fname, ncid, id, tmp_qc(1 : nprof))
+    do f=1,nprof
+       write (pos_qc_all(f),'(i1)') tmp_qc(f)
+    end do
      
+    deallocate(tmp_qc)
+
     allocate(tmp_all(nlev,nprof))
+    allocate(tmp_qc2(nlev,nprof))
 
     mlev=min(MLEV0,nlev)
     allocate(mask_sub(nprof),tmp_sub(nprof))
 
+    Tpres=.true.
+    ! optimized to choose the vertical variable: 
+    if (nfw_var_exists(ncid, 'PRES').and.nfw_var_exists(ncid, 'DEPH')) then
+        call nfw_inq_varid(fname, ncid, 'DEPH', id)
+        if (nfw_var_att_exists(ncid, id, '_FillValue')) then
+           call nfw_get_att_double(fname, ncid, id, '_FillValue', fillval)
+        endif
+        if (nfw_var_att_exists(ncid, id, 'scale_factor')) then
+           call nfw_get_att_double(fname, ncid, id, 'scale_factor', scalefac)
+           call nfw_get_att_double(fname, ncid, id, 'add_offset', addoffset)
+        else
+           scalefac(1)=1
+           addoffset(1)=0
+        endif
+        call nfw_get_var_double(fname, ncid, id, tmp_all(1 : nlev, 1 : nprof))
+        allocate(tmp_dep(nlev))
+        ff0=0
+        do ff=1,nprof
+           tmp_dep(:)=scalefac(1)*tmp_all(:,ff)+addoffset(1)
+           fflev: do f=1,nlev
+              if (tmp_dep(f)>=0.and.tmp_dep(f)<2000) then
+                 ff0=ff0+1
+                 exit fflev
+              endif
+           end do fflev
+        end do 
+        deallocate(tmp_dep)
+        if (ff0==nprof) then
+           Tpres=.false.
+        endif
+    endif
+
+
     ! adjusted by Jiping 28/07/2015
-    if (nfw_var_exists(ncid, 'PRES')) then
+    if (nfw_var_exists(ncid, 'PRES') .and. Tpres) then
       ! pres
       !
       call nfw_inq_varid(fname, ncid, 'PRES', id)
@@ -826,9 +884,16 @@ contains
       endif
 
       ! pres_qc
-      !
-      call nfw_inq_varid(fname, ncid, 'PRES_QC', id)
-      call nfw_get_var_text(fname, ncid, id, pres_qc_all(1 : nlev, 1 : nprof))
+      if (nfw_var_exists(ncid, 'PRES_QC')) then
+         call nfw_inq_varid(fname, ncid, 'PRES_QC', id)
+         !call nfw_get_var_text(fname, ncid, id, pres_qc_all(1 : nlev, 1 : nprof))
+         call nfw_get_var_int1(fname, ncid, id, tmp_qc2(1:nlev,1 : nprof))
+         do f=1,mlev
+            do ff=1,nprof
+               write (pres_qc_all(f,ff),'(i1)') tmp_qc2(f,ff)
+            end do
+         end do
+      endif
     else
       ! pres
       !
@@ -872,9 +937,16 @@ contains
       endif
 
       ! pres_qc
-      !
-      call nfw_inq_varid(fname, ncid, 'DEPH_QC', id)
-      call nfw_get_var_text(fname, ncid, id, pres_qc_all(1 : nlev, 1 : nprof))
+      if (nfw_var_exists(ncid, 'DEPH_QC')) then
+         call nfw_inq_varid(fname, ncid, 'DEPH_QC', id)
+         !call nfw_get_var_text(fname, ncid, id, pres_qc_all(1 : nlev, 1 : nprof))
+         call nfw_get_var_int1(fname, ncid, id, tmp_qc2(1:nlev,1 : nprof))
+         do f=1,mlev
+            do ff=1,nprof
+               write (pres_qc_all(f,ff),'(i1)') tmp_qc2(f,ff)
+            end do
+         end do
+      endif
     endif
 
 
@@ -912,6 +984,9 @@ contains
           where (tmp_sub(:)>=varmin(1).and.tmp_sub(:)<=varmax(1))
             mask_sub(:)=1
           endwhere
+          where (mask_sub(:)==1.and.tmp_sub(:)<0)
+             tmp_sub(:)=0.     
+          endwhere
           where (mask_sub/=1)
             tmp_sub=99999.
           endwhere
@@ -926,15 +1001,22 @@ contains
 
       ! temp_qc
       !
-      call nfw_inq_varid(fname, ncid, 'TEMP_QC', id)
-      call nfw_get_var_text(fname, ncid, id, temp_qc_all(1 : nlev, 1 : nprof))
+      if (nfw_var_exists(ncid, 'TEMP_QC')) then
+         call nfw_inq_varid(fname, ncid, 'TEMP_QC', id)
+         !call nfw_get_var_text(fname, ncid, id, temp_qc_all(1 : nlev, 1 : nprof))
+         call nfw_get_var_int1(fname, ncid, id, tmp_qc2(1 : nlev,1:nprof))
+         do f=1,mlev
+            do ff=1,nprof
+               write (temp_qc_all(f,ff),'(i1)') tmp_qc2(f,ff)
+            end do
+         end do
+       endif
     else
        temp_qc_all = 'E';
     endif
 
     if (nfw_var_exists(ncid, 'PSAL')) then
        ! psal
-       !
        call nfw_inq_varid(fname, ncid, 'PSAL', id)
        call nfw_get_var_double(fname, ncid, id, tmp_all(1 : nlev, 1 : nprof))
        if (nfw_var_att_exists(ncid,id,'valid_min') .and.nfw_var_att_exists(ncid,id,'valid_max')) then
@@ -977,14 +1059,22 @@ contains
 
        ! psal_qc
        !
-       call nfw_inq_varid(fname, ncid, 'PSAL_QC', id)
-       call nfw_get_var_text(fname, ncid, id, salt_qc_all(1 : nlev, 1 : nprof))
+       if (nfw_var_exists(ncid, 'PSAL_QC')) then
+          call nfw_inq_varid(fname, ncid, 'PSAL_QC', id)
+          !call nfw_get_var_text(fname, ncid, id, salt_qc_all(1 : nlev, 1 : nprof))
+          call nfw_get_var_int1(fname, ncid, id, tmp_qc2(1 : nlev,1:nprof))
+          do f=1,mlev
+             do ff=1,nprof
+                write (salt_qc_all(f,ff),'(i1)') tmp_qc2(f,ff)
+             end do
+          end do
+       endif
     else
        salt_qc_all = 'E';
     end if
 
 
-    deallocate(tmp_all)
+    deallocate(tmp_all,tmp_qc2)
     deallocate(mask_sub,tmp_sub)
 
 #if defined (BLACK_PROFILE)
