@@ -184,6 +184,7 @@ contains
     use mod_measurement
     use mod_grid
     use nfw_mod
+
     implicit none
 !Fanf: this routine assume that you have one seperate file for each day.
 !Call prepobs 7 times (for each cycle days with the date and the corrsponding
@@ -213,33 +214,32 @@ contains
     character(STRLEN) :: ftemplate
     character(STRLEN) :: fname
     character(STRLEN) :: fpath
+
+    integer :: satnm,isat
+    real    :: var_sat
     logical :: ex
 
     print *, 'read_MYO_TSLA():'
+
+
+    !  call sat_fromtemplate(0,satnm,var_sat)
+    !print*, "valid satellite number: ", satnm
 
     fpath='./'
     read(julday,'(i7)') age
     read(dayinweek,'(i2)') idayinweek 
     nobs = 0
-    do sid = 1, 17 ! loop over satellite ID
+    do sid = 1, 15 ! loop over satellite ID
        select case(sid)
        case(1)
-          ftemplate = trim(fpath)//'sla_'//trim(julday)//'_en.nc'
-          varsat = 0.0009 ! 3 cm for ENVISAT 
-          print *, '  ENVISSAT:'
-       case(11)
-          ftemplate = trim(fpath)//'sla_'//trim(julday)//'_enn.nc'
+          ftemplate = trim(fpath)//'sla_'//trim(julday)//'_en*.nc'
           varsat = 0.0009 ! 3 cm for ENVISAT 
           print *, '  ENVISSAT:'
        case(2)
-          ftemplate = trim(fpath)//'sla_'//trim(julday)//'_j1.nc'
-          varsat = 0.0009 ! 3 cm for ENVISAT Jason1
-          print *, '  Jason1:'
-       case(10)
           ftemplate = trim(fpath)//'sla_'//trim(julday)//'_j1*.nc'
           varsat = 0.0009 ! 3 cm for ENVISAT Jason1
           print *, '  Jason1:'
-       case(13)
+       case(10)
           ftemplate = trim(fpath)//'sla_'//trim(julday)//'_h2*.nc'
           varsat = 0.0016 ! 4 cm for Haiyang2
           print *, '  H2:'
@@ -268,25 +268,29 @@ contains
           varsat = 0.0030 ! CRYOSAT-2
           print *, '  CRYOSAT2:'
        case(9)
-          ftemplate = trim(fpath)//'sla_'//trim(julday)//'_a*.nc'
+          ftemplate = trim(fpath)//'sla_'//trim(julday)//'_al*.nc'
           varsat = 0.0009 ! ALTIKA
           print *, '  ALTIKA:'
-       case(14)
+       case(11)
           ftemplate = trim(fpath)//'sla_'//trim(julday)//'_j3*.nc'
           varsat = 0.0009 !  J3
           print *, '  J3:'
-       case(15)
+       case(12)
           ftemplate = trim(fpath)//'sla_'//trim(julday)//'_s3a.nc'
           varsat = 0.0009 !  S3a/S3b
           print *, '  S3a:'
-       case(16)
+       case(13)
           ftemplate = trim(fpath)//'sla_'//trim(julday)//'_s3b.nc'
           varsat = 0.0009 !  S3a/S3b
           print *, '  S3b:'
-       case(17)
+       case(14)
           ftemplate = trim(fpath)//'sla_'//trim(julday)//'_s6*.nc'
           varsat = 0.0009 !  S6a
           print *, '  S6:'
+       case(15)
+          ftemplate = trim(fpath)//'sla_'//trim(julday)//'_swo*.nc'
+          varsat = 0.0009 !  swon/swonc
+          print *, '  swon:'
        end select
        call fname_fromtemplate(ftemplate, fname)
 
@@ -436,5 +440,62 @@ contains
        fname = ""
     end if
   end subroutine fname_fromtemplate
+
+  ! predefinition the observation variance
+  ! 0.0009
+  ! 0.0075 (e1*,e2*); 0.003 (g2*; c2*); 0.0016 (h2*)
+  subroutine sat_fromtemplate(ilen,Nlen,satvar)
+    implicit none
+    integer,  intent(in) :: ilen 
+    integer, intent(out) :: Nlen 
+    real,    intent(out) :: satvar
+
+    character(STRLEN) :: command ! (there may be a limit of 80 on some systems)
+    integer           :: fcount,fn
+    integer           :: ios
+    character(8)      :: satname 
+    character(2)      :: sat2
+
+    ! check the file lines for tsla_files.txt
+    Nlen=0
+    open(10, file = 'tsla_files.txt',status='old')
+       DO
+       READ(10,*,iostat=ios)
+       IF (ios/=0) EXIT
+       Nlen = Nlen + 1
+       END DO
+    close(10)
+    if (ilen==0) then
+       satvar=0.0
+    else
+       if (ilen>Nlen) then
+          print *, "Wrong input line for satelliate data"
+          stop 
+       else
+          ! N.B.: using the fixed file format: sla_?????_*.nc
+          open(10, file = 'tsla_files.txt')
+             do fcount=1,ilen 
+                read(10, fmt = '(a)', iostat = ios) command
+             enddo
+             fn=len(command)-3
+             satname=command(11:fn)
+             print *, "satelite: "//trim(satname)
+             sat2=satname(1:2)
+             if (sat2=='e1'.or.sat2=='e2') then
+                satvar=0.0075
+             elseif (sat2=='g2'.or.sat2=='c2') then
+                satvar=0.003
+             elseif (sat2=='h2') then
+                satvar=0.0016
+             else
+                satvar=0.0009
+             endif
+          close(10)
+       endif
+    endif
+
+  end subroutine sat_fromtemplate
+
+
 
 end module m_read_CLS_TSLA
