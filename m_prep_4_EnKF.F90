@@ -1,8 +1,6 @@
 ! File:          m_prep_4_EnKF.F90
 !
-! Created:       ???
-!
-! Last modified: 29/06/2010
+! Last modified: 29/06/2023
 !
 ! Purpose:       Calculation of HA ("S")
 !
@@ -18,6 +16,12 @@
 !                  - added generic observation QC: increase the observation
 !                    error when observation and ensemble mean are much too far
 !                    away than expected
+!                23/Jun/2022 JP:
+!                  - added support ice forecast from HYCOM_CICE 
+!                  - added SSS assimilation
+!                01/Dec/2025 JP:
+!                  - added IDRFT2D for two options of OSISAF ice drift products
+!
 !                Prior history:
 !                  Not documented.
 
@@ -78,7 +82,11 @@ contains
     integer, parameter :: drnx = 152, drny = 132
     real,    parameter :: onem = 9.806 
     real*4, dimension(drnx, drny) :: modzon, modmer
+#if defined (IDRFT2D)
     integer, parameter :: drnx_osisaf = 119, drny_osisaf = 177
+#else
+    integer, parameter :: drnx_osisaf = 144, drny_osisaf = 144
+#endif
     real*4, dimension(drnx_osisaf, drny_osisaf) :: dX, dY
 
     integer :: reclSLA, ios, reclDRIFT
@@ -192,9 +200,7 @@ contains
                 end if
                 stop
              end if
-             ! skipping the transfer in TP5:  23Jun 2022 
-             !readfld = readfld * field2 ! pers. comm. Francois Counillon 2013
-             ! exp3:
+
              readfld = readfld * field2   ! using effective sea ice thickness
 
              call Generate_element_Si(S(:, iens), unique_obs(iuobs),&
@@ -224,6 +230,24 @@ contains
              call Generate_element_Si(S(:, iens), unique_obs(iuobs),&
                   readfld, depths, nx, ny, nz, 0) 
           end do
+
+       elseif (trim(unique_obs(iuobs)) == 'SSS') then
+          do iens = 1, nrens
+             write(cmem,'(i3.3)') iens
+             tlevel = 1
+             call get_mod_fld_new(trim('forecast'//cmem), readfld, iens,&
+                  'saln', 1, tlevel, nx, ny,0)
+             if (tlevel == -1) then
+                if (master) then
+                   print *, 'ERROR: get_mod_fld_new(): failed for "SSS"'
+                end if
+                stop
+             end if
+
+             call Generate_element_Si(S(:, iens), unique_obs(iuobs),&
+                  readfld, depths, nx, ny, nz, 0)
+          end do
+
 
        elseif (trim(unique_obs(iuobs)) == 'SST') then
           do iens = 1, nrens
@@ -309,10 +333,7 @@ contains
                    !readfld = (readfld - field2)/onem ! mean SSH
                    readfld = readfld - field2         ! mean SSH
                 end if
-                if (master) then
-                   print *, 'read SLA for iens=', iens, & 
-                       ' and then to obtain the S(:,iens)'
-                endif
+
                 call Generate_element_Si(S(:, iens), unique_obs(iuobs),&
                      readfld, depths, nx, ny, nz, t)
              end do
