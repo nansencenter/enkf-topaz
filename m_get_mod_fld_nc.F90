@@ -52,6 +52,10 @@ subroutine get_mod_fld_nc(memfile,fld,cfld0,vlevel,tlevel,nx,ny)
         tlevel=1
         fld=readfldr8
       endif
+      if (master) then
+         print *, 'debuging SICAP in April 2026..'
+         print *,'Existing '//trim(memfile)//' at (400,400) of ', trim(cfld), ' is ', fld(400,400)
+      endif
    end if
    call nfw_close(memfile,ncid)
 end subroutine

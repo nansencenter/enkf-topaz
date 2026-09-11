@@ -391,7 +391,9 @@ contains
           end do
        elseif ((index(unique_obs(iuobs),'DX') > 0 ) .or. (index(unique_obs(iuobs),'DY') > 0)) then
           ! OSISAF Ice drift observations (d-2-offset -> d-offset)
-          print *, 'Ice drift observation type: ', unique_obs(iuobs)
+          if (master) then
+              print *, 'Ice drift observation type: ', unique_obs(iuobs)
+          endif
           offset = unique_obs(iuobs)(3:3)
           ! Use offset (1,2,3,4 or 5) to open correct model drift file
           inquire(iolength=reclDRIFT) dX, dY

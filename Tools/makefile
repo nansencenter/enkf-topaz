@@ -1,7 +1,7 @@
 MPI = NO
 include ../make.inc
 
-VPATH = ../:./:TMP/
+VPATH = ../:./:../TMP/
 
 PROGS = EnKF_assemble\
 checkice\

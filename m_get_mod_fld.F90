@@ -109,6 +109,9 @@ subroutine get_mod_fld_new(memfile,fld,iens,cfld0,vlevel,tlevel,nx,ny,Indfield)
        trim(cfld) /= 'vicen' .and. trim(cfld) /= 'vsnon' .and. &
        trim(cfld) /= 'ticem' .and. trim(cfld) /= 'tsrfm' .and. & 
        trim(cfld) /= 'sicem' .and. trim(cfld) /= 'tsnom' .and. & 
+       trim(cfld) /= 'Pstar' .and. trim(cfld) /= 'astar' .and. & 
+       trim(cfld) /= 'iceruf' .and. trim(cfld) /= 'emissi' .and. & 
+       trim(cfld) /= 'floediam' .and. trim(cfld) /= 'dragio' .and. & 
        trim(cfld) /= 'ficem' .and. trim(cfld) /= 'hicem') then
 
       ! KAL - 1) f kva index som skal lesast finn vi fraa .b fil (header)
@@ -160,7 +163,8 @@ subroutine get_mod_fld_new(memfile,fld,iens,cfld0,vlevel,tlevel,nx,ny,Indfield)
      end if
      fld=readfldr4
 
-   else ! fld = fice, hice
+     else ! fld = fice, hice
+
       ! Gammal rutine ja
 #if defined(HYCOM_CICE)
       indx=-1
@@ -168,9 +172,14 @@ subroutine get_mod_fld_new(memfile,fld,iens,cfld0,vlevel,tlevel,nx,ny,Indfield)
       call get_mod_fld_nc(trim(icefile), readfldr8, &
                   cfld, vlevel, indx, nx, ny)
       if (indx==-1) then
-         icefile='ice_'//trim(memfile)//'.nc'
+         icefile='icep_'//trim(memfile)//'.nc'
          call get_mod_fld_nc(trim(icefile), readfldr8, &
                   cfld, vlevel, indx, nx, ny)
+         if (indx==-1) then
+            icefile='ice_'//trim(memfile)//'.nc'
+            call get_mod_fld_nc(trim(icefile), readfldr8, &
+                  cfld, vlevel, indx, nx, ny)
+         end if
       end if
       if (indx < 0) then
          if (master) then
@@ -179,14 +188,14 @@ subroutine get_mod_fld_new(memfile,fld,iens,cfld0,vlevel,tlevel,nx,ny,Indfield)
             stop
          end if
          stop
-!      else
-!         print *, trim(icefile), ' '//trim(cfld), vlevel,Indfield
       end if
 
-#else
-      call get_mod_fld(readfldr8,iens,cfld,0,1,nx,ny)
-#endif
       fld=readfldr8
+#else
+      !  call get_mod_fld(readfldr8,iens,cfld,0,1,nx,ny)
+      print *, 'No developing for this parameter!'
+      stop
+#endif
    end if
 
 
