@@ -27,15 +27,15 @@ contains
          call nfw_open(filename, nf_nowrite, ncid)
          print *, '  found "', trim(filename), '"...'
           ! Get dimension id in netcdf file ...
-          call nfw_inq_dimid(filename, ncid, 'lon', lon_ID)
-          call nfw_inq_dimid(filename, ncid, 'lat', lat_ID)
+          call nfw_inq_dimid(filename, ncid, 'longitude', lon_ID)
+          call nfw_inq_dimid(filename, ncid, 'latitude', lat_ID)
           ! Get dimension length from id
           call nfw_inq_dimlen(filename, ncid, lon_ID, nblon)
           call nfw_inq_dimlen(filename, ncid, lat_ID, nblat)
           print*, 'Dimensions lon,lat:', nblon, nblat
           allocate(lon(nblon), lat(nblat))
-          call nfw_inq_varid(filename, ncid, 'lon', lon_ID)
-          call nfw_inq_varid(filename, ncid, 'lat', lat_ID)
+          call nfw_inq_varid(filename, ncid, 'longitude', lon_ID)
+          call nfw_inq_varid(filename, ncid, 'latitude', lat_ID)
           call nfw_get_var_double(filename, ncid, lon_ID, lon)
           call nfw_get_var_double(filename, ncid, lat_ID, lat)
           call nfw_close(filename, ncid)

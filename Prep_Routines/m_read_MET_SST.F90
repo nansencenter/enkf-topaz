@@ -5,7 +5,7 @@ module m_read_MET_SST
 
 contains
 
-  subroutine read_MET_SST(filename,gr,data,Dflg)
+  subroutine read_MET_SST(filename,gr,data)
     use mod_measurement
     use mod_grid
     use m_spherdist
@@ -14,9 +14,8 @@ contains
     implicit none
 
     type (measurement),  intent(inout) :: data(:)
-    type (grid),         intent(inout) :: gr       ! measurement grid
-    character(len=80),      intent(in) :: filename
-    integer,                intent(in) :: Dflg     ! different product formats
+    type (grid),         intent(inout) :: gr ! CLS measurement grid
+    character(len=80),   intent(in) :: filename
 
     ! Variable ids
     integer :: lon_ID, lat_ID,vsst_ID, vstd_ID, vmask_ID
@@ -27,15 +26,16 @@ contains
     real*8, dimension(1) :: undef_sst
     integer :: i, j, count1
     real, parameter :: eps = 0.01  ! test for undefined values
-
-    ! enlarge times for the error variance changed in Sep 2025
-    real            :: Lscale
-
+!#if (defined CCI_SST || defined C3S_SST || defined NRT_SST)
+!    real, parameter :: Lscale = 6  ! enlarge times
+!#else
+    real, parameter :: Lscale = 8  ! enlarge times default used after 2018 
+!#endif
     ! filen name
     logical         :: ex
 
     print *, 'read_MET_SST:'
-
+    print *, 'Lscale', Lscale
     inquire(file=trim(filename),exist=ex)
     if (ex) then
        ! Reading the observation file 
@@ -45,24 +45,16 @@ contains
        allocate(lon(gr%nx), lat(gr%ny), sst(gr%nx,gr%ny), std(gr%nx, gr%ny), mask(gr%nx, gr%ny))
 
        ! Variable ids in netcdf file
-       call nfw_inq_varid(filename, ncid, 'lat', lat_ID)
-       call nfw_inq_varid(filename, ncid,'lon', lon_ID)
+       call nfw_inq_varid(filename, ncid,'latitude', lat_ID)
+       call nfw_inq_varid(filename, ncid,'longitude', lon_ID)
        call nfw_inq_varid(filename, ncid,'analysed_sst' ,vsst_ID)
-       if (Dflg==1) then   ! to avoid the discontinuety in the real operational run
-          ! nrt product OSTIA SST
-          call nfw_inq_varid(filename, ncid,'analysis_error' ,vstd_ID)
-          ! enlarge times default used in TOPAZ4 
-          Lscale=6.0
-      
-       elseif (Dflg==2) then
-          ! ESACCI SST <=2016
-          call nfw_inq_varid(filename, ncid,'analysed_sst_uncertainty' ,vstd_ID)
-          Lscale=4.0
-       else
-          ! C3S2 SST <=2024
-          call nfw_inq_varid(filename, ncid,'analysis_error_sst' ,vstd_ID)
-          Lscale=6.0
-       endif
+#if defined (CCI_SST)
+       call nfw_inq_varid(filename, ncid,'analysis_error' ,vstd_ID)
+#elif defined (C3S_SST)
+       call nfw_inq_varid(filename, ncid,'analysis_uncertainty' ,vstd_ID)
+#else
+       call nfw_inq_varid(filename, ncid,'analysis_error' ,vstd_ID)
+#endif
        call nfw_inq_varid(filename, ncid,'mask' ,vmask_ID)
        
        ! Variable _FillValue attributes
@@ -88,7 +80,8 @@ contains
             !here we only consider:
             !data above -30 of lat; valid, within reasonable range,
             ! and only open ocean (mask == 1)
-            !                 
+            !  
+            !print *, 'i:', i, ', j:', j, ',sst(i,j):',sst(i,j)               
             if (lat(j) > -30 .and.&
                      abs(sst(i,j)-undef_sst(1)) > eps .and.&
                      mask(i,j) == 1 .and. & 
@@ -96,7 +89,7 @@ contains
                      sst(i,j) < 4500 .and. &
                      std(i,j) > 0.0) then
                    data(count1)%id = 'SST'
-                   data(count1)%d = sst(i,j)*0.01  
+                   data(count1)%d = (sst(i,j) - 273.15)*0.01  
                    data(count1)%ipiv = count1 !whatever it is filled afterwards
                    data(count1)%jpiv = 1   !whaterver it is filled afterwards
                    data(count1)%lat=lat(j)
@@ -107,6 +100,12 @@ contains
                    data(count1)%date = 0
                    data(count1)%depth = 0.0
                    data(count1)%status = .true.
+                   !if (data(count1)%var>500) then
+                   !     print*, 'i=',i, 'j=',j,'longitude=',lon(i),'latitude=',lat(j), 'Variance = ',data(count1)%var,'Value =', data(count1)%d
+                   !endif
+                   if (i==6844 .and. j>3260 .and. j<3280) then
+                         print*, 'i=',i,'j=',j,'longitude=',lon(i),'latitude=',lat(j), 'Variance =',data(count1)%var,'Value =', data(count1)%d
+                   endif
                    count1=count1+1
             endif
           enddo   !i
@@ -114,6 +113,9 @@ contains
        print*, '    # of obs read = ', count1
        deallocate(lat, lon, sst, mask)
     end if ! ex
-    print *, 'MAX var(SST) = ', maxval(data(1 : count1) % var)
+    print *, 'MAX variance(SST) = ', maxval(data(1 : count1) % var)
+    print *, 'MAX value(SST) = ', maxval(data(1 : count1) % d)
+    print *, 'MAX latitude = ', maxval(data(1 : count1) % lat)
+    print *, 'MAX longitude = ', maxval(data(1 : count1) % lon)
   end subroutine read_MET_SST
 end module m_read_MET_SST

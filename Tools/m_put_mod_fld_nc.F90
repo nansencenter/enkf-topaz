@@ -185,6 +185,8 @@ subroutine fix_cice(fice,hice,sss,nx,ny,ncat,restart,icerestart,yearday,Ahice,Va
 
    ! Step 0:  QC for the analyzed active 3-D ice variables: aicen, vicen,vsnon
    ficem=0
+   print *, 'print0 aicen(253,190) = ', aicen(253,190,1)
+
    ! adjusting aicen:
    do j=1,ny
      do i=1,nx
@@ -195,6 +197,9 @@ subroutine fix_cice(fice,hice,sss,nx,ny,ncat,restart,icerestart,yearday,Ahice,Va
              aicen_f(i,j,k)=max(0.,aicen_f(i,j,k))
              aicen_f(i,j,k)=min(1.,aicen_f(i,j,k))
           end do
+          if (i==253 .and. j==190) then
+              print *, 'print1 aicen(253,190) = ', aicen(253,190,1)
+          end if
           ficem(i,j)=sum(aicen(i,j,:))
           fice_f(i,j)=sum(aicen_f(i,j,:))
           ! require the minimal threshold for the distribution 
@@ -215,6 +220,9 @@ subroutine fix_cice(fice,hice,sss,nx,ny,ncat,restart,icerestart,yearday,Ahice,Va
                    aicen(i,j,k)=aicen(i,j,k)/ficem(i,j)
                 end do
              endif
+              if (i==253 .and. j==190) then
+                 print *, 'print2 aicen(253,190) = ', aicen(253,190,1)
+          end if
           else  ! Generate the new ice
              if (Vadjust==1) then
                 aicen(i,j,:)=0.; vicen(i,j,:)=0.; vsnon(i,j,:)=0.
@@ -235,7 +243,9 @@ subroutine fix_cice(fice,hice,sss,nx,ny,ncat,restart,icerestart,yearday,Ahice,Va
                 else
                    aicen(i,j,:)=0.; vicen(i,j,:)=0.; vsnon(i,j,:)=0.
                 endif
-       
+                if (i==253 .and. j==190) then
+                    print *, 'print3 aicen(253,190) = ', aicen(253,190,1)
+                end if
              endif
           endif
           ficem(i,j)=sum(aicen(i,j,:))
@@ -245,6 +255,7 @@ subroutine fix_cice(fice,hice,sss,nx,ny,ncat,restart,icerestart,yearday,Ahice,Va
        endif
      end do
    end do
+   print *, 'print4 aicen(253,190) = ', aicen(253,190,1)
 
    ! dealing with vicen / vsnon:
    do j=1,ny
@@ -383,7 +394,7 @@ subroutine fix_cice(fice,hice,sss,nx,ny,ncat,restart,icerestart,yearday,Ahice,Va
             end do
          end do
 
-         if (ll>17.and.ll<24) then
+         if (ll>1.and.ll<24) then
             print *, 'final: '
             print '(a8,i3,a10,e15.5,a8,i3)','qice',ll,'(510,580)',fld2d(ist,jst),' at k=',k
          endif

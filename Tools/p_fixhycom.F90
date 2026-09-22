@@ -149,10 +149,15 @@ program fixhycom
    print *,a_restart(1:fnd-1)//'.b'
    newfile='fix'//a_restart(1:fnd-1)
 
+   print *, 'called mod grid'
+   print *, 'mindx:', mindx
+   print *, 'meandx:', meandx
+   print *, 'idm:', idm
+   print *, 'jdm:', jdm
 
    ! Get model grid
    call get_mod_grid(modlon,modlat,depths,mindx,meandx,idm,jdm)
-
+   print *, 'called grid model'
    !loop over the two time level
    ! Get layer thickness
    dpsum=0.
@@ -216,6 +221,7 @@ program fixhycom
         trim(cfld) /= 'ficem'.and.trim(cfld) /= 'hicem'
 
       allok=tlevel/=-1.and.Touchice    ! test to see if read was ok
+      print *, 'touch', Touchice
       if (.not.Touchice) Iceind=rstind
 #else
       allok=tlevel/=-1 ! test to see if read was ok
@@ -326,16 +332,16 @@ program fixhycom
    ! Loop over restart file
    print *, 'dealing with the ice variables ... '
    rstind=max(1,Iceind) ! Restart index
+   print *, 'rstind0 ', rstind
    allok=.true.
 
-   do while ( allok)
-
+   do while (allok .and. rstind < 2544)
       print '(a8,i3,i3)',cfld, vlevel,tlevel
       ! Get header info from restart
       call rst_header_from_index(a_restart(1:fnd-1)//'.b', &
             cfld,vlevel,tlevel,rstind,bmin,bmax,.true.)
-
-      allok=tlevel/=-1 ! test to see if read was ok
+      print *, 'rstind1 ', rstind
+      allok=tlevel==-1 ! test to see if read was ok
 
       if (rstind < 0) then
          print *, 'ERROR: fixhycom to read ', trim(a_restart(1:fnd-1)), '.b: "',&
@@ -365,31 +371,32 @@ program fixhycom
          if (vlevel>0) then
             select case (cfld)
                case ('aicen')
-                 !print *,'aicen : ',amin,amax
+                 print *,'aicen : ',amin,amax
                  aicen(:,:,vlevel)=real(fldr4,8);
                case ('vicen')
-                 !print *,'vicen : ',amin,amax
+                 print *,'vicen : ',amin,amax
                  vicen(:,:,vlevel)=real(fldr4,8);
                case ('vsnon')
-                 !print *,'vsnon : ',amin,amax
+                 print *,'vsnon : ',amin,amax
                  vsnon(:,:,vlevel)=real(fldr4,8);
             end select
          else
             select case (cfld)
                case ('ficem')
-                 !print *,'ficem : ',amin,amax
+                 print *,'ficem : ',amin,amax
                  ficem=real(fldr4,8);
                case ('hicem')
-                 !print *,'hicem : ',amin,amax
+                 print *,'hicem : ',amin,amax
                  hicem=real(fldr4,8);
                case ('hsnwm')
-                 !print *,'hsnwm : ',amin,amax
+                 print *,'hsnwm : ',amin,amax
                  hsnwm=real(fldr4,8);
             end select
          endif
       endif
       rstind=rstind+1
    end do  ! read the template cycle is end
+   print *, 'min max ficem :', minval(ficem), maxval(ficem)
 
 !  preliminary filter grid mask for sea ice  
    ficem=min(max(0.,ficem), 1.)

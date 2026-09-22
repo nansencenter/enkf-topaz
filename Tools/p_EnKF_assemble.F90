@@ -220,11 +220,11 @@ program EnKF_postprocess
          ilev0=0
       endif
       do vlevel=ilev0,fieldlevels(ifld)   
-         do jafile=iafile,nproc ! List of procs used in analysis
+         nomatch=.true.
+         do jafile=nproc,nproc ! List of procs used in analysis
             write(cproc,'(i3.3)') jafile-1
             ! Temporary name, will change
             afile='analysis'//cmem//'_proc'//cproc
-
             ! NB - time level=1
             ! NB2 - the files dumped in the analysis lack a header (last argument
             ! is false)
@@ -256,8 +256,11 @@ program EnKF_postprocess
 
                exit
             end if
-
          end do
+         if (nomatch) then
+            print '(a8," -- time, layer:",2i4," - no match - replace with rdm values")',cfld,tlevel,vlevel
+            call put_mod_fld('analysis'//cmem,fld,imem,cfld,vlevel,tlevel,rstind,idm,jdm)
+         end if
       end do
 
    end do   ! ice field cycle

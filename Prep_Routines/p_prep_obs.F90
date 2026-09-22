@@ -28,12 +28,14 @@ program p_prep_obs
   use m_read_CLS_data
   use m_read_CLS_SST_grid
   use m_read_MET_SST_grid
+  use m_read_HYCOM_SST_grid
   use m_read_CLS_TSLA_grid
   use m_read_CLS_SST
   use m_read_CLS_SSH
   use m_read_CLS_SLA
   use m_read_CLS_TSLA
   use m_read_MET_SST
+  use m_read_HYCOM_SST
   use m_read_CERSAT_data
   use m_read_OSISAF_data
   use m_read_SMOS_HICE
@@ -93,19 +95,15 @@ program p_prep_obs
   integer        :: iday
   character*4    :: lday
   
-  iday=0
   call getarg(1,options)
   if (trim(options)=="tsla" .or. trim(options)=="TSLA") then
     call getarg(2,options)
     read(options,*) iday 
-  else if (trim(options)=="sst" .or. trim(options)=="SST") then
-    call getarg(2,options)
-    read(options,*) iday 
+    write(lday,'(i2)') iday
   else
     iday=1    ! asynchronously in present version
+    write(lday,'(i2)') iday
   end if
-  write(lday,'(i2)') iday
-  print *,"iday=", iday
   
 
   gr = default_grid
@@ -160,9 +158,24 @@ program p_prep_obs
         grpoints = gr % nx * gr % ny
         allocate(data(grpoints))
         allocate(obs(maxobs))
-        call read_MET_SST(fname, gr, data,iday)
+        print *, 'grpoint', grpoints
+        print *, 'maxobs', maxobs
+        call read_MET_SST(fname, gr, data)
      else
         stop 'ERROR: OSTIA (MET) only produces SST'
+     endif
+
+  else if (trim(Producer) == 'HYCOM') then
+
+     if (trim(obstype) == 'SST') then
+        dosuperob = .true.
+        call read_HYCOM_SST_grid(fnamehdr, gr) 
+        grpoints = gr % nx * gr % ny
+        allocate(data(grpoints))
+        allocate(obs(maxobs))
+        call read_HYCOM_SST(fname, gr, data)
+     else
+        stop 'ERROR:  ERROR WITH HYCOM Producer'
      endif
 
   else if (trim(Producer) == 'NSIDC-AMSR') then
@@ -218,16 +231,6 @@ program p_prep_obs
         stop
      endif
 
-  else if (trim(Producer) == 'MLTP4') then
-     if (trim(obstype) == 'HICE') then
-        dosuperob = .true.
-        call read_mltp4_hice(fname, data, gr)
-        allocate (obs(size(data)))
-     else
-        print *, 'There can be no ', obstype,' data from', Producer
-        stop
-     endif
-
   elseif (trim(producer) == 'CLS') then
 
      if (trim(obstype) == 'SLA') then
@@ -258,11 +261,13 @@ program p_prep_obs
 
      elseif (trim(obstype) == 'TSLA') then
         dosuperob = .true.
+        !call read_CLS_TSLA_grid(fnamehdr, gr)
         call read_MYO_TSLA_grid(fnamehdr, gr)
         print *, 'read_CLS_TSLA_grid finished, total # of obs = ', gr % nx 
         grpoints = gr % nx 
         allocate(data(grpoints))
         allocate(obs(maxobs))
+        !call read_CLS_TSLA(fname,gr,data)
         call read_MYO_TSLA(fname,'1',gr,data)
      else
         print *, 'data of type "', trim(obstype),'"  from producer "', producer, '" is not handled'
@@ -385,7 +390,17 @@ program p_prep_obs
      ! Extract the defined and wet data points
      ! Write locations to ijfile to be used in TECPLOT
      !
+     !print *, 'obs:', obs 
+     !print *, 'data:', data
+     !print *, 'gr:', gr
+     !print *, 'depths:', depths
+     !print *, 'modlat:', modlat
+     !print *, 'modlon:', modlon
+     print *, 'nrobs:', nrobs
+     print *, 'nx:', nx
+     print *, 'ny:', ny
      call get_def_wet_point(obs, data, gr, depths, modlat, modlon, nrobs, nx, ny)
+     print *, 'nrobs after get def wet:', nrobs
   else
      print *, 'check_forland'
      call check_forland(data, depths, size(data), nx, ny)
@@ -538,9 +553,7 @@ subroutine check_forland(data, depths, nrobs, ni, nj)
      jmin = max(1, data(o) % jpiv - 1)
      imax = min(ni, data(o) % ipiv + 2)
      jmax = min(nj, data(o) % jpiv + 2)
-     if (any(depths(imin:imax,jmin:jmax) < 5.0 .or.       &
-         depths(imin:imax,jmin:jmax) == depths(imin:imax, &
-         jmin:jmax) + 1.0)) then
+     if (any(depths(imin:imax,jmin:jmax) < 10.0 .or. depths(imin:imax,jmin:jmax) == depths(imin:imax,jmin:jmax) + 1.0)) then
         data(o) % status = .false.
         nmasked = nmasked + 1
      end if

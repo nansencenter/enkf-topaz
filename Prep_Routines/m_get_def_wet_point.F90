@@ -41,7 +41,7 @@ contains
     real wetsill, griddiag, mingridsize, minobssize
 
     logical wet
-
+    integer :: i, row, col
     ! gr = default_grid
     nrobs = 0; 
     nsmin = maxobs; 
@@ -58,8 +58,6 @@ contains
     !Compute bilinear coefficients
     print *, 'test: ',gridpoints(gr), ' !!'
     call read_mean_ssh(mean_ssh, nx, ny,SSHmask)
-
-
     do k = 1, gridpoints(gr)
        if (data(k) % id .eq. 'SLA' .or. data(k) % id .eq. 'sla' .or. &
             data(k) % id.eq. 'SSH' .or. data(k)%id .eq. 'ssh' .or.&

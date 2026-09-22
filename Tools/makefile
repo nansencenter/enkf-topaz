@@ -4,6 +4,7 @@ include ../make.inc
 VPATH = ../:./:TMP/
 
 PROGS = EnKF_assemble\
+EnKF_assemble_BGC\
 checkice\
 checkice_en\
 consistency\
@@ -21,6 +22,12 @@ mod_raw_io.o\
 m_parse_blkdat.o\
 m_put_mod_fld.o\
 p_EnKF_assemble.o
+
+ENKF_ASSEMBLE_BGC_OBJ = qmpi.o\
+mod_raw_io.o\
+m_parse_blkdat.o\
+m_put_mod_fld.o\
+p_EnKF_assemble_BGC.o
 
 CONSISTENCY_OBJ = qmpi.o\
 mod_raw_io.o\
@@ -117,11 +124,15 @@ m_get_mod_nrens.o: qmpi.o
 m_obs.o : m_parameters.o m_uobs.o
 m_get_mod_fld.o : nfw.o m_get_mod_fld_nc.o
 
-$(ENKF_ASSEMBLE_OBJ) $(CONSISTENCY_OBJ) $(FIXHYCOM_ECO_OBJ) $(FIXHYCOM_OBJ) $(OBSSTATS_OBJ) $(OLDTONEWOBS_OBJ): MODEL.CPP makefile
+$(ENKF_ASSEMBLE_OBJ) $(CONSISTENCY_OBJ) $(FIXHYCOM_ECO_OBJ) $(FIXHYCOM_OBJ) $(OBSSTATS_OBJ) $(OLDTONEWOBS_OBJ) $(ENKF_ASSEMBLE_BGC_OBJ): MODEL.CPP makefile
 
 EnKF_assemble: $(ENKF_ASSEMBLE_OBJ)
 	@echo "->EnKF_assemble"
 	@cd ./TMP ; $(LD) $(LINKFLAGS) -o ../EnKF_assemble $(ENKF_ASSEMBLE_OBJ) 
+
+EnKF_assemble_BGC: $(ENKF_ASSEMBLE_BGC_OBJ)
+	@echo "->EnKF_assemble_BGC"
+	@cd ./TMP ; $(LD) $(LINKFLAGS) -o ../EnKF_assemble_BGC $(ENKF_ASSEMBLE_BGC_OBJ)
 
 consistency: $(CONSISTENCY_OBJ)
 	@echo "->consistency"
