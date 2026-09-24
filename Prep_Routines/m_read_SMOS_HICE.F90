@@ -229,11 +229,6 @@ contains
         data(nobs) % id = 'HICE'
         data(nobs) % d = real(hice(i, j)) 
 #if defined (CYSMOS_Error)
-!ifdef CYSMOS_Error
-        !data(nobs) % var =  (hvar(i,j)+min(0.5,0.1+0.15*hice(i,j))) ** 2 !  Offset 0.1-0.5 
-        ! tuning at 20th April 2017
-!        data(nobs) % var =  (hvar(i,j)+min(0.25,0.1+0.075*hice(i,j))) ** 2 ! Offset 0.1-0.25 
-!elseif CYSMOS_Error2
         ! tuning at 20th May 2019 relative to the new version of CS2SMOS
         if (hice(i,j)<3) then
           data(nobs) % var =  (hvar(i,j)+max(0.02,0.1*exp(-hice(i,j)*1.5))) ** 2 ! Offset 0.1-0.02 

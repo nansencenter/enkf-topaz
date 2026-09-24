@@ -9,6 +9,8 @@
 ! Description:   
 !
 ! Modifications:
+!                22/08/2026 JX:
+!                  - Checking analysisfields_ice.in exists or not for ice update 
 !                16/07/2019 JX:
 !                  - Mofication as the reqirements for HYCOM_CICE 
 !                25/10/2011 FC:
@@ -39,9 +41,9 @@ program fixhycom
    implicit none
 
    integer*4, external :: iargc
-   real, parameter :: onem=9806.
-   real, parameter :: PSTARB0 = 1000;
-   real                             :: Hflag  !whether assimilate HICE or not
+   real, parameter     :: onem=9806.
+   real, parameter     :: PSTARB0 = 1000;
+   real                :: Hflag  !whether assimilate HICE or not
 
 #if defined(HYCOM_CICE)
    integer,                  parameter :: ncat=5
@@ -83,8 +85,10 @@ program fixhycom
 
    real :: mindx,meandx
 
-   logical :: Touchice
+   logical :: ex2 
+   logical :: Touchice,Iceskip
    integer :: Iceind
+
 
    f_restart=''
    f_icerestart=''
@@ -301,7 +305,13 @@ program fixhycom
    ! note to keep mind: tmp???.b to be used replacing the fixrestart or
    ! transport to overwrite the forecasted restart file after postprocessing
    ! for CICE
-
+   inquire(exist=ex2,file='analysisfields_ice.in')
+   if (.not. ex2) then
+       print *, "Skiping sea ice process due to missng analysisfields_ice.in!"
+       print *, "ICESKIP=.true."
+       print *,'(fixhycom done)'
+       stop
+   end if
 
 !###################################################################
 !####################### FIX   ICE   MODEL #########################

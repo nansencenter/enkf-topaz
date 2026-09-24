@@ -62,49 +62,43 @@ contains
    logical :: ex
    character(len=8) :: char8
 
+   get_nrfields=0
    inquire(exist=ex,file=infile)
    if (.not. ex) then
       if (master) print *,'Could not find '//infile
-      call stop_mpi()
+      ! call stop_mpi()
+   else
+      open(10,status='old',form='formatted',file=infile,action='read')
+      ios=0
+      do while (ios==0)
+         read(10,100,iostat=ios) char8,first,last
+         if (ios==0) then
+            get_nrfields=get_nrfields+last-first+1
+         end if
+      end do
+      close(10)
    end if
 
-   open(10,status='old',form='formatted',file=infile,action='read')
-   ios=0
-   get_nrfields=0
-   do while (ios==0)
-      read(10,100,iostat=ios) char8,first,last
-      if (ios==0) then
-         get_nrfields=get_nrfields+last-first+1
-      end if
-   end do
-   close(10)
-   100 format (a8,2i3)
-
-   numfields_hycom=get_nrfields
 #if defined (HYCOM_CICE)
    inquire(exist=ex,file=infile_ice)
-
-!   if (.not. ex) then
-!      if (master) print *,'Could not find '//infile_ice
-!      call stop_mpi()
-!   end if
    if (ex) then
-     open(10,status='old',form='formatted',file=infile_ice,action='read')
-     ios=0
-     do while (ios==0)
-       read(10,200,iostat=ios) char8,first,last
-       if (ios==0) get_nrfields=get_nrfields+last-first+1
-     end do
-     close(10)
+      open(10,status='old',form='formatted',file=infile_ice,action='read')
+      ios=0
+      do while (ios==0)
+         read(10,100,iostat=ios) char8,first,last
+         if (ios==0) get_nrfields=get_nrfields+last-first+1
+      end do
+      close(10)
    else
      if (master) print *,'Could not find '//infile_ice
-!      call stop_mpi()
    end if
-
-   200 format (a8,2i3)
 #endif
 
+   numfields_hycom=get_nrfields
+   100 format (a8,2i3)
    end function
+
+
 
    subroutine get_analysisfields()
 #if defined (QMPI)
@@ -124,60 +118,57 @@ contains
       if (master) print *,'numfields is higher than max allowed setting or = 0'
       call stop_mpi()
    end if
+
    allocate(fieldnames(numfields))
    allocate(fieldlevel(numfields))
    allocate(fieldindex(numfields))
 
-
    inquire(exist=ex,file=infile)
    if (.not. ex) then
       if (master) print *,'Could not find '//infile
-      call stop_mpi()
+      !  call stop_mpi()
+   else
+      open(10,status='old',form='formatted',file=infile,action='read')
+      k0=0
+      ios=0
+      nfld=0
+      do while (ios==0)
+         read(10,100,iostat=ios) char8,first,last
+         if (ios==0) then
+            do k=first,last
+               fieldnames (nfld+k-first+1)=char8
+               fieldlevel (nfld+k-first+1)=k
+               k0=k0+1
+               fieldindex (nfld+k-first+1)=k0
+            end do
+            nfld=nfld+last-first+1
+         end if
+      end do
+      close(10)
    end if
-
-   open(10,status='old',form='formatted',file=infile,action='read')
-   k0=0
-   ios=0
-   nfld=0
-   do while (ios==0)
-      read(10,100,iostat=ios) char8,first,last
-      if (ios==0) then
-         do k=first,last
-            fieldnames (nfld+k-first+1)=char8
-            fieldlevel (nfld+k-first+1)=k
-            k0=k0+1
-            fieldindex (nfld+k-first+1)=k0
-         end do
-         nfld=nfld+last-first+1
-      end if
-   end do
-   close(10)
-   100 format (a8,2i3)
-
 
 #if defined (HYCOM_CICE)
    inquire(exist=ex,file=infile_ice)
    if (ex) then
-     open(10,status='old',form='formatted',file=infile_ice,action='read')
-     ios=0
-     do while (ios==0)
-        read(10,200,iostat=ios) char8,first,last
-        if (ios==0) then
-           do k=first,last
-              fieldnames (nfld+k-first+1)=char8
-              fieldlevel (nfld+k-first+1)=k
-              k0=k0+1
-              fieldindex (nfld+k-first+1)=k0
-           end do
-           nfld=nfld+last-first+1
-        end if
-     end do
-     close(10)
+      open(10,status='old',form='formatted',file=infile_ice,action='read')
+      ios=0
+      do while (ios==0)
+         read(10,100,iostat=ios) char8,first,last
+         if (ios==0) then
+            do k=first,last
+                fieldnames (nfld+k-first+1)=char8
+                fieldlevel (nfld+k-first+1)=k
+                k0=k0+1
+                fieldindex (nfld+k-first+1)=k0
+            end do
+            nfld=nfld+last-first+1
+         end if
+      end do
+      close(10)
    else
       if (master) print *,'Could not find '//infile_ice
     !  call stop_mpi()
    end if
-   200 format (a8,2i3)
 #endif
 
    if (nfld/=numfields) then
@@ -190,7 +181,9 @@ contains
       if (master) print *,fieldnames(k),fieldlevel(k),fieldindex(k)
    end do
 
+   100 format (a8,2i3)
    end subroutine
+
 end module mod_analysisfields
 
 
